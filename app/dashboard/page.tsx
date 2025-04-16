@@ -231,7 +231,8 @@ export default function DashboardPage() {
             </div>
           </TabsContent>
           <TabsContent value="clients" className="space-y-4">
-            <ClientSummary isV0={isV0} />
+            <ClientSummary /> 
+            {/* agregar los parametros from y to */}
           </TabsContent>
           <TabsContent value="expenses" className="space-y-4">
             <AdminExpenses isV0={isV0} />

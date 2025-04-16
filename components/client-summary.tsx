@@ -83,7 +83,7 @@ interface ClientSummaryProps {
   isV0?: boolean
 }
 
-export function ClientSummary({ isV0 = false }: ClientSummaryProps) {
+export function ClientSummary() { // agregar parametro de from y To
   const [clientStats, setClientStats] = useState<ClientStats>({})
   const [clientGroups, setClientGroups] = useState<ClientGroup[]>([])
   const [loading, setLoading] = useState(true)
@@ -93,20 +93,13 @@ export function ClientSummary({ isV0 = false }: ClientSummaryProps) {
       try {
         setLoading(true)
 
-        // Si estamos en v0, usar datos de demostración
-        if (isV0) {
-          console.log("Usando datos de clientes de demostración para v0")
-          setTimeout(() => {
-            setClientStats(demoClientStats)
-            setClientGroups(demoClientGroups)
-            setLoading(false)
-          }, 500) // Simular carga
-          return
-        }
-
         const [stats, groups] = await Promise.all([getClientStats(), getClientGroups()])
         setClientStats(stats || {})
         setClientGroups(groups || [])
+
+        // funcion para filtrar por fecha
+
+
       } catch (error) {
         console.error("Error al cargar datos de clientes:", error)
         setClientStats({})
@@ -117,7 +110,7 @@ export function ClientSummary({ isV0 = false }: ClientSummaryProps) {
     }
 
     fetchData()
-  }, [isV0])
+  }, [])
 
   if (loading) {
     return (
