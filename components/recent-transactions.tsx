@@ -165,3 +165,47 @@ export function RecentTransactions({ isV0 = false }: RecentTransactionsProps) {
     </div>
   )
 }
+
+
+// export function RecentTransactions() {
+
+//   let [transactions, setTransactions] = useState<any[]>([])
+//   const [loading, setLoading] = useState(true)
+
+//   useEffect(() => {
+//     async function fetchExampleTransactions() {
+//       try {
+//         setLoading(true)
+//         const exampleData = await fetch("https://api.sampleapis.com/coffee/hot").then((res) => res.json())
+//         setTransactions(exampleData || [])
+
+//         console.log(transactions);
+//       }
+//       catch (error) {
+//         console.error("Error fetching example transactions:", error)
+//         setTransactions([])
+//       }
+//       finally {
+//         setLoading(false)
+//       }
+//     }
+//     fetchExampleTransactions()
+//   }, [])
+
+//   return (
+//     <>
+//       <h1>Cantidad de transacciones: {transactions.length}</h1>
+//       <br />
+//       { transactions.forEach((transaction) => (
+//         <div key={transaction.id}>
+//           <p>{transaction.title}</p>
+//           <p>{transaction.price}</p>
+//           <p>{transaction.description}</p>
+//         </div>
+//       )) }
+//       {loading && <p>Cargando...</p>}
+//       {transactions.length === 0 && <p>No hay transacciones recientes</p>}
+
+//     </>
+//   )
+// }

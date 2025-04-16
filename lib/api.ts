@@ -1,5 +1,6 @@
 // Importar los tipos necesarios
 import type { Transaction, AdminExpense, ClientGroup, ClientStats, DashboardStats } from "@/types/index"
+// import { getRecentTransactions } from '@/lib/api';
 
 // Función para detectar si estamos en el entorno de v0
 const isV0Environment = () => {
@@ -213,6 +214,34 @@ export async function getRecentTransactions(): Promise<Transaction[]> {
   }
 }
 
+export async function getRecentTransactionsByDate(startDate: Date, endDate: Date): Promise<any[]> {
+  try {
+    const { getSupabaseClient } = await import("./supabase")
+    const supabase = getSupabaseClient()
+
+    if (!supabase) {
+      console.error("Error: Cliente Supabase no inicializado")
+      return []
+    }
+
+    const { data, error } = await supabase.rpc("get_transactions_in_range", {
+      start_date: startDate.toISOString(),
+      end_date: endDate.toISOString(),
+    });
+
+    if (error) {
+      console.error("Error al ejecutar SQL crudo:", error);
+      return [];
+    }
+
+    return data;
+  } catch (err) {
+    console.error("Error general:", err);
+    return [];
+  }
+}
+
+
 // Interfaz para los datos de transacción
 interface TransactionInput {
   client_id: number
@@ -355,120 +384,120 @@ export async function getClientGroups(): Promise<ClientGroup[]> {
 }
 
 // Función para obtener estadísticas de clientes
-export async function getClientStats(): Promise<ClientStats> {
-  try {
-    console.log("Obteniendo estadísticas de clientes...")
+// export async function getClientStats(): Promise<ClientStats> {
+//   try {
+//     console.log("Obteniendo estadísticas de clientes...")
 
-    // Verificar si estamos en el entorno de v0
-    if (isV0Environment()) {
-      console.log("Detectado entorno v0.dev - usando datos de demostración")
-      // Devolver datos de demostración para el entorno de v0
-      return {
-        Fenix: {
-          leads: 120,
-          expenses: 800.5,
-          funding: 1500.0,
-          balance: 699.5,
-        },
-        Eros: {
-          leads: 85,
-          expenses: 450.25,
-          funding: 1000.0,
-          balance: 549.75,
-        },
-        Fortuna: {
-          leads: 65,
-          expenses: 320.0,
-          funding: 800.0,
-          balance: 480.0,
-        },
-        Gana24: {
-          leads: 45,
-          expenses: 250.0,
-          funding: 600.0,
-          balance: 350.0,
-        },
-        Atenea: {
-          leads: 30,
-          expenses: 180.0,
-          funding: 400.0,
-          balance: 220.0,
-        },
-        Flashbet: {
-          leads: 20,
-          expenses: 150.0,
-          funding: 300.0,
-          balance: 150.0,
-        },
-      }
-    }
+//     // Verificar si estamos en el entorno de v0
+//     if (isV0Environment()) {
+//       console.log("Detectado entorno v0.dev - usando datos de demostración")
+//       // Devolver datos de demostración para el entorno de v0
+//       return {
+//         Fenix: {
+//           leads: 120,
+//           expenses: 800.5,
+//           funding: 1500.0,
+//           balance: 699.5,
+//         },
+//         Eros: {
+//           leads: 85,
+//           expenses: 450.25,
+//           funding: 1000.0,
+//           balance: 549.75,
+//         },
+//         Fortuna: {
+//           leads: 65,
+//           expenses: 320.0,
+//           funding: 800.0,
+//           balance: 480.0,
+//         },
+//         Gana24: {
+//           leads: 45,
+//           expenses: 250.0,
+//           funding: 600.0,
+//           balance: 350.0,
+//         },
+//         Atenea: {
+//           leads: 30,
+//           expenses: 180.0,
+//           funding: 400.0,
+//           balance: 220.0,
+//         },
+//         Flashbet: {
+//           leads: 20,
+//           expenses: 150.0,
+//           funding: 300.0,
+//           balance: 150.0,
+//         },
+//       }
+//     }
 
-    // Importar el cliente de Supabase directamente
-    const { getSupabaseClient } = await import("./supabase")
-    const supabase = getSupabaseClient()
+//     // Importar el cliente de Supabase directamente
+//     const { getSupabaseClient } = await import("./supabase")
+//     const supabase = getSupabaseClient()
 
-    if (!supabase) {
-      console.error("Error: Cliente Supabase no inicializado")
-      return {}
-    }
+//     if (!supabase) {
+//       console.error("Error: Cliente Supabase no inicializado")
+//       return {}
+//     }
 
-    // Obtener todos los clientes
-    const { data: clients, error: clientsError } = await supabase.from("clients").select("id, name").order("name")
+//     // Obtener todos los clientes
+//     const { data: clients, error: clientsError } = await supabase.from("clients").select("id, name").order("name")
 
-    if (clientsError) {
-      console.error("Error al obtener clientes:", clientsError)
-      return {}
-    }
+//     if (clientsError) {
+//       console.error("Error al obtener clientes:", clientsError)
+//       return {}
+//     }
 
-    // Obtener todas las transacciones
-    const { data: transactions, error: transactionsError } = await supabase
-      .from("transactions")
-      .select("client_id, type, amount, clients(name)")
+//     // Obtener todas las transacciones
+//     const { data: transactions, error: transactionsError } = await supabase
+//       .from("transactions")
+//       .select("client_id, type, amount, clients(name)")
 
-    if (transactionsError) {
-      console.error("Error al obtener transacciones:", transactionsError)
-      return {}
-    }
+//     if (transactionsError) {
+//       console.error("Error al obtener transacciones:", transactionsError)
+//       return {}
+//     }
 
-    // Calcular estadísticas por cliente
-    const stats: ClientStats = {}
+//     // Calcular estadísticas por cliente
+//     const stats: ClientStats = {}
 
-    // Inicializar estadísticas para cada cliente
-    clients.forEach((client) => {
-      stats[client.name] = {
-        leads: 0,
-        expenses: 0,
-        funding: 0,
-        balance: 0,
-      }
-    })
+//     // Inicializar estadísticas para cada cliente
+//     clients.forEach((client) => {
+//       stats[client.name] = {
+//         leads: 0,
+//         expenses: 0,
+//         funding: 0,
+//         balance: 0,
+//       }
+//     })
 
-    // Calcular estadísticas basadas en transacciones
-    transactions.forEach((tx) => {
-      const clientName = tx.clients?.name
-      if (!clientName || !stats[clientName]) return
+//     // Calcular estadísticas basadas en transacciones
+//     transactions.forEach((tx) => {
+//       const clientName = tx.clients?.name
+//       if (!clientName || !stats[clientName]) return
 
-      if (tx.type === "lead") {
-        stats[clientName].leads += tx.amount || 0
-      } else if (tx.type === "expense") {
-        stats[clientName].expenses += tx.amount || 0
-      } else if (tx.type === "funding") {
-        stats[clientName].funding += tx.amount || 0
-      }
-    })
+//       if (tx.type === "lead") {
+//         stats[clientName].leads += tx.amount || 0
+//       } else if (tx.type === "expense") {
+//         stats[clientName].expenses += tx.amount || 0
+//       } else if (tx.type === "funding") {
+//         stats[clientName].funding += tx.amount || 0
+//       }
+//     })
 
-    // Calcular balance para cada cliente
-    Object.keys(stats).forEach((clientName) => {
-      stats[clientName].balance = stats[clientName].funding - stats[clientName].expenses
-    })
+//     // Calcular balance para cada cliente
+//     Object.keys(stats).forEach((clientName) => {
+//       stats[clientName].balance = stats[clientName].funding - stats[clientName].expenses
+//     })
 
-    console.log("Estadísticas de clientes calculadas")
-    return stats
-  } catch (error) {
-    console.error("Error inesperado al obtener estadísticas de clientes:", error)
-    return {}
-  }
-}
+//     console.log("Estadísticas de clientes calculadas")
+//     return stats
+//   } catch (error) {
+//     console.error("Error inesperado al obtener estadísticas de clientes:", error)
+//     return {}
+//   }
+// }
 
 // Función para obtener la lista de clientes
 export async function getClients() {

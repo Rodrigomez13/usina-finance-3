@@ -12,6 +12,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { getDashboardStats } from "@/lib/api"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { RecentTransactionsByDate } from '../../components/recent-transactions-by-date';
 
 // Función para detectar si estamos en el entorno de v0
 const isV0Environment = () => {
@@ -29,6 +30,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isV0, setIsV0] = useState(false)
+
+  const [calendarDates, setCalendarDates] = useState({
+    from: new Date(2025, 3, 1),
+    to: new Date(),
+  })
+
 
   useEffect(() => {
     // Detectar inmediatamente si estamos en v0
@@ -84,7 +91,20 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight text-[#0e6251]">Dashboard Financiero</h2>
         <div className="flex items-center space-x-2">
-          <CalendarDateRangePicker />
+
+        <CalendarDateRangePicker 
+          onDateChange={(dateRange): any => {
+            console.log("Rango seleccionado:", dateRange)
+            
+            if (dateRange && dateRange.from && dateRange.to) {
+              setCalendarDates({
+                from: dateRange.from,
+                to: dateRange.to,
+              })
+            }
+
+          }}
+        />
           <Link href="/transactions/new">
             <Button className="bg-[#148f77] hover:bg-[#0e6251] text-white">
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -205,7 +225,7 @@ export default function DashboardPage() {
                   <CardDescription className="text-[#7f8c8d]">Se muestran las últimas 5 transacciones</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <RecentTransactions isV0={isV0} />
+                  <RecentTransactionsByDate dateRange={calendarDates}/>
                 </CardContent>
               </Card>
             </div>

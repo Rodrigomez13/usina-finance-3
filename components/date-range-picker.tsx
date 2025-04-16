@@ -11,11 +11,27 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-export function CalendarDateRangePicker({ className }: React.HTMLAttributes<HTMLDivElement>) {
+// Definir las props incluyendo el callback para el cambio de fecha
+interface CalendarDateRangePickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  onDateChange?: (dateRange: DateRange | undefined) => void
+}
+
+export function CalendarDateRangePicker({
+  className,
+  onDateChange,
+}: CalendarDateRangePickerProps) {
   const [date, setDate] = React.useState<DateRange | undefined>({
     from: new Date(2025, 3, 1),
     to: new Date(),
   })
+
+  // Manejar cambios y notificar al padre
+  const handleDateSelect = (dateRange: DateRange | undefined) => {
+    setDate(dateRange)
+    if (onDateChange) {
+      onDateChange(dateRange)
+    }
+  }
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -46,7 +62,7 @@ export function CalendarDateRangePicker({ className }: React.HTMLAttributes<HTML
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={setDate}
+            onSelect={handleDateSelect}  // Usar el manejador personalizado
             numberOfMonths={2}
             locale={es}
           />
