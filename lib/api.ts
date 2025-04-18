@@ -227,20 +227,19 @@ export async function getRecentTransactionsByDate(startDate: Date, endDate: Date
     const { data, error } = await supabase.rpc("get_transactions_in_range", {
       start_date: startDate.toISOString(),
       end_date: endDate.toISOString(),
-    });
+    })
 
     if (error) {
-      console.error("Error al ejecutar SQL crudo:", error);
-      return [];
+      console.error("Error al ejecutar SQL crudo:", error)
+      return []
     }
 
-    return data;
+    return data
   } catch (err) {
-    console.error("Error general:", err);
-    return [];
+    console.error("Error general:", err)
+    return []
   }
 }
-
 
 // Interfaz para los datos de transacción
 interface TransactionInput {
@@ -384,120 +383,120 @@ export async function getClientGroups(): Promise<ClientGroup[]> {
 }
 
 // Función para obtener estadísticas de clientes
-// export async function getClientStats(): Promise<ClientStats> {
-//   try {
-//     console.log("Obteniendo estadísticas de clientes...")
+export async function getClientStats(): Promise<ClientStats> {
+  try {
+    console.log("Obteniendo estadísticas de clientes...")
 
-//     // Verificar si estamos en el entorno de v0
-//     if (isV0Environment()) {
-//       console.log("Detectado entorno v0.dev - usando datos de demostración")
-//       // Devolver datos de demostración para el entorno de v0
-//       return {
-//         Fenix: {
-//           leads: 120,
-//           expenses: 800.5,
-//           funding: 1500.0,
-//           balance: 699.5,
-//         },
-//         Eros: {
-//           leads: 85,
-//           expenses: 450.25,
-//           funding: 1000.0,
-//           balance: 549.75,
-//         },
-//         Fortuna: {
-//           leads: 65,
-//           expenses: 320.0,
-//           funding: 800.0,
-//           balance: 480.0,
-//         },
-//         Gana24: {
-//           leads: 45,
-//           expenses: 250.0,
-//           funding: 600.0,
-//           balance: 350.0,
-//         },
-//         Atenea: {
-//           leads: 30,
-//           expenses: 180.0,
-//           funding: 400.0,
-//           balance: 220.0,
-//         },
-//         Flashbet: {
-//           leads: 20,
-//           expenses: 150.0,
-//           funding: 300.0,
-//           balance: 150.0,
-//         },
-//       }
-//     }
+    // Verificar si estamos en el entorno de v0
+    if (isV0Environment()) {
+      console.log("Detectado entorno v0.dev - usando datos de demostración")
+      // Devolver datos de demostración para el entorno de v0
+      return {
+        Fenix: {
+          leads: 120,
+          expenses: 800.5,
+          funding: 1500.0,
+          balance: 699.5,
+        },
+        Eros: {
+          leads: 85,
+          expenses: 450.25,
+          funding: 1000.0,
+          balance: 549.75,
+        },
+        Fortuna: {
+          leads: 65,
+          expenses: 320.0,
+          funding: 800.0,
+          balance: 480.0,
+        },
+        Gana24: {
+          leads: 45,
+          expenses: 250.0,
+          funding: 600.0,
+          balance: 350.0,
+        },
+        Atenea: {
+          leads: 30,
+          expenses: 180.0,
+          funding: 400.0,
+          balance: 220.0,
+        },
+        Flashbet: {
+          leads: 20,
+          expenses: 150.0,
+          funding: 300.0,
+          balance: 150.0,
+        },
+      }
+    }
 
-//     // Importar el cliente de Supabase directamente
-//     const { getSupabaseClient } = await import("./supabase")
-//     const supabase = getSupabaseClient()
+    // Importar el cliente de Supabase directamente
+    const { getSupabaseClient } = await import("./supabase")
+    const supabase = getSupabaseClient()
 
-//     if (!supabase) {
-//       console.error("Error: Cliente Supabase no inicializado")
-//       return {}
-//     }
+    if (!supabase) {
+      console.error("Error: Cliente Supabase no inicializado")
+      return {}
+    }
 
-//     // Obtener todos los clientes
-//     const { data: clients, error: clientsError } = await supabase.from("clients").select("id, name").order("name")
+    // Obtener todos los clientes
+    const { data: clients, error: clientsError } = await supabase.from("clients").select("id, name").order("name")
 
-//     if (clientsError) {
-//       console.error("Error al obtener clientes:", clientsError)
-//       return {}
-//     }
+    if (clientsError) {
+      console.error("Error al obtener clientes:", clientsError)
+      return {}
+    }
 
-//     // Obtener todas las transacciones
-//     const { data: transactions, error: transactionsError } = await supabase
-//       .from("transactions")
-//       .select("client_id, type, amount, clients(name)")
+    // Obtener todas las transacciones
+    const { data: transactions, error: transactionsError } = await supabase
+      .from("transactions")
+      .select("client_id, type, amount, clients(name)")
 
-//     if (transactionsError) {
-//       console.error("Error al obtener transacciones:", transactionsError)
-//       return {}
-//     }
+    if (transactionsError) {
+      console.error("Error al obtener transacciones:", transactionsError)
+      return {}
+    }
 
-//     // Calcular estadísticas por cliente
-//     const stats: ClientStats = {}
+    // Calcular estadísticas por cliente
+    const stats: ClientStats = {}
 
-//     // Inicializar estadísticas para cada cliente
-//     clients.forEach((client) => {
-//       stats[client.name] = {
-//         leads: 0,
-//         expenses: 0,
-//         funding: 0,
-//         balance: 0,
-//       }
-//     })
+    // Inicializar estadísticas para cada cliente
+    clients.forEach((client) => {
+      stats[client.name] = {
+        leads: 0,
+        expenses: 0,
+        funding: 0,
+        balance: 0,
+      }
+    })
 
-//     // Calcular estadísticas basadas en transacciones
-//     transactions.forEach((tx) => {
-//       const clientName = tx.clients?.name
-//       if (!clientName || !stats[clientName]) return
+    // Calcular estadísticas basadas en transacciones
+    transactions.forEach((tx) => {
+      const clientName = tx.clients?.name
+      if (!clientName || !stats[clientName]) return
 
-//       if (tx.type === "lead") {
-//         stats[clientName].leads += tx.amount || 0
-//       } else if (tx.type === "expense") {
-//         stats[clientName].expenses += tx.amount || 0
-//       } else if (tx.type === "funding") {
-//         stats[clientName].funding += tx.amount || 0
-//       }
-//     })
+      if (tx.type === "lead") {
+        stats[clientName].leads += tx.amount || 0
+      } else if (tx.type === "expense") {
+        stats[clientName].expenses += tx.amount || 0
+      } else if (tx.type === "funding") {
+        stats[clientName].funding += tx.amount || 0
+      }
+    })
 
-//     // Calcular balance para cada cliente
-//     Object.keys(stats).forEach((clientName) => {
-//       stats[clientName].balance = stats[clientName].funding - stats[clientName].expenses
-//     })
+    // Calcular balance para cada cliente
+    Object.keys(stats).forEach((clientName) => {
+      stats[clientName].balance = stats[clientName].funding - stats[clientName].expenses
+    })
 
-//     console.log("Estadísticas de clientes calculadas")
-//     return stats
-//   } catch (error) {
-//     console.error("Error inesperado al obtener estadísticas de clientes:", error)
-//     return {}
-//   }
-// }
+    console.log("Estadísticas de clientes calculadas")
+    return stats
+  } catch (error) {
+    console.error("Error inesperado al obtener estadísticas de clientes:", error)
+    return {}
+  }
+}
 
 // Función para obtener la lista de clientes
 export async function getClients() {
@@ -539,6 +538,73 @@ export async function getClients() {
     return data || []
   } catch (error) {
     console.error("Error inesperado al obtener clientes:", error)
+    return []
+  }
+}
+
+// Función para obtener gastos administrativos recientes
+export async function getRecentAdminExpenses(): Promise<any[]> {
+  try {
+    console.log("Obteniendo gastos administrativos recientes...")
+
+    // Verificar si estamos en el entorno de v0
+    if (isV0Environment()) {
+      console.log("Detectado entorno v0.dev - usando datos de demostración")
+      // Devolver datos de demostración para el entorno de v0
+      return [
+        {
+          id: 101,
+          concept: "Alquiler de oficina",
+          amount: 500,
+          date: new Date().toISOString(),
+          status: "pending",
+          client_name: "Compartido",
+        },
+        {
+          id: 102,
+          concept: "Servicios de internet",
+          amount: 100,
+          date: new Date(Date.now() - 86400000).toISOString(),
+          status: "paid",
+          client_name: "Compartido",
+        },
+      ]
+    }
+
+    // Importar el cliente de Supabase directamente
+    const { getSupabaseClient } = await import("./supabase")
+    const supabase = getSupabaseClient()
+
+    if (!supabase) {
+      console.error("Error: Cliente Supabase no inicializado")
+      return []
+    }
+
+    // Obtener los gastos administrativos recientes
+    const { data, error } = await supabase
+      .from("admin_expenses")
+      .select("id, concept, amount, date, status, paid_by")
+      .order("date", { ascending: false })
+      .limit(5)
+
+    if (error) {
+      console.error("Error al obtener gastos administrativos recientes:", error)
+      return []
+    }
+
+    // Transformar los datos para que coincidan con el formato esperado
+    const formattedData = data.map((expense) => ({
+      id: expense.id,
+      concept: expense.concept,
+      amount: expense.amount,
+      date: expense.date,
+      status: expense.status,
+      client_name: expense.paid_by === "shared" ? "Compartido" : expense.paid_by,
+    }))
+
+    return formattedData || []
+  } catch (error) {
+    console.error("Error inesperado al obtener gastos administrativos recientes:", error)
     return []
   }
 }
@@ -854,6 +920,52 @@ export async function updateExpenseStatus(expenseId: number, status: "pending" |
   }
 }
 
+// Añadir la función para actualizar el estado de una distribución
+export async function updateDistributionStatus(distributionId: number, status: "pending" | "paid"): Promise<any> {
+  try {
+    console.log(`Actualizando estado de distribución ${distributionId} a ${status}...`)
+
+    // Verificar si estamos en el entorno de v0
+    if (isV0Environment()) {
+      console.log("Detectado entorno v0.dev - simulando actualización de estado de distribución")
+      // Simular una respuesta exitosa
+      return {
+        id: distributionId,
+        status,
+        updated_at: new Date().toISOString(),
+      }
+    }
+
+    // Importar el cliente de Supabase directamente
+    const { getSupabaseClient } = await import("./supabase")
+    const supabase = getSupabaseClient()
+
+    if (!supabase) {
+      console.error("Error: Cliente Supabase no inicializado")
+      throw new Error("No se pudo inicializar el cliente de Supabase")
+    }
+
+    // Actualizar el estado de la distribución
+    const { data, error } = await supabase
+      .from("expense_distributions")
+      .update({ status })
+      .eq("id", distributionId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Error al actualizar estado de distribución:", error)
+      throw error
+    }
+
+    console.log("Estado de distribución actualizado exitosamente:", data)
+    return data
+  } catch (error) {
+    console.error("Error inesperado al actualizar estado de distribución:", error)
+    throw error
+  }
+}
+
 // Función para exportar transacciones a CSV
 export async function exportTransactionsToCSV(startDate: string, endDate: string) {
   try {
@@ -930,5 +1042,171 @@ export async function exportTransactionsToCSV(startDate: string, endDate: string
   } catch (error) {
     console.error("Error inesperado al exportar transacciones a CSV:", error)
     throw error
+  }
+}
+
+// Función para obtener las transacciones de un cliente específico
+export async function getClientTransactions(clientName: string): Promise<any[]> {
+  try {
+    console.log(`Obteniendo transacciones para el cliente ${clientName}...`)
+
+    // Verificar si estamos en el entorno de v0
+    if (isV0Environment()) {
+      console.log("Detectado entorno v0.dev - usando datos de demostración")
+      // Devolver datos de demostración para el entorno de v0
+      return [
+        {
+          id: 1,
+          date: "2025-04-13",
+          type: "expense",
+          amount: 100,
+          notes: "Compra Landing Page's",
+        },
+        {
+          id: 2,
+          date: "2025-04-13",
+          type: "funding",
+          amount: 5000,
+          notes: "Fondeo Jordan",
+        },
+        {
+          id: 3,
+          date: "2025-04-12",
+          type: "lead",
+          amount: 127,
+          notes: "Se obtuvieron del server 4",
+        },
+        {
+          id: 4,
+          date: "2025-04-12",
+          type: "expense",
+          amount: 1369.06,
+          notes: "Gasto de publicidad generado automáticamente para 127 leads",
+        },
+      ]
+    }
+
+    // Importar el cliente de Supabase directamente
+    const { getSupabaseClient } = await import("./supabase")
+    const supabase = getSupabaseClient()
+
+    if (!supabase) {
+      console.error("Error: Cliente Supabase no inicializado")
+      return []
+    }
+
+    // Obtener el ID del cliente
+    const { data: clientData, error: clientError } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("name", clientName)
+      .single()
+
+    if (clientError || !clientData) {
+      console.error("Error al obtener el cliente:", clientError)
+      return []
+    }
+
+    // Obtener las transacciones del cliente
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("id, date, type, amount, notes, payment_method, category")
+      .eq("client_id", clientData.id)
+      .order("date", { ascending: false })
+
+    if (error) {
+      console.error("Error al obtener transacciones del cliente:", error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error inesperado al obtener transacciones del cliente:", error)
+    return []
+  }
+}
+
+// Función para obtener los gastos administrativos de un cliente específico
+export async function getClientAdminExpenses(clientName: string): Promise<any[]> {
+  try {
+    console.log(`Obteniendo gastos administrativos para el cliente ${clientName}...`)
+
+    // Verificar si estamos en el entorno de v0
+    if (isV0Environment()) {
+      console.log("Detectado entorno v0.dev - usando datos de demostración")
+      // Devolver datos de demostración para el entorno de v0
+      return [
+        {
+          id: 1,
+          date: "2025-03-21",
+          concept: "Pago suscripción avica",
+          amount: 41.65,
+          status: "paid",
+          percentage: 16.67,
+        },
+        {
+          id: 2,
+          date: "2025-04-12",
+          concept: "Compra de apis",
+          amount: 83.35,
+          status: "paid",
+          percentage: 16.67,
+        },
+      ]
+    }
+
+    // Importar el cliente de Supabase directamente
+    const { getSupabaseClient } = await import("./supabase")
+    const supabase = getSupabaseClient()
+
+    if (!supabase) {
+      console.error("Error: Cliente Supabase no inicializado")
+      return []
+    }
+
+    // Obtener el ID del cliente
+    const { data: clientData, error: clientError } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("name", clientName)
+      .single()
+
+    if (clientError || !clientData) {
+      console.error("Error al obtener el cliente:", clientError)
+      return []
+    }
+
+    // Obtener los gastos administrativos del cliente
+    const { data, error } = await supabase
+      .from("expense_distributions")
+      .select(`
+        id, 
+        percentage, 
+        amount, 
+        status,
+        admin_expenses(id, concept, date, amount, status)
+      `)
+      .eq("client_id", clientData.id)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("Error al obtener gastos administrativos del cliente:", error)
+      return []
+    }
+
+    // Transformar los datos al formato esperado
+    const formattedData = data.map((item) => ({
+      id: item.admin_expenses.id,
+      date: item.admin_expenses.date,
+      concept: item.admin_expenses.concept,
+      amount: item.amount,
+      status: item.status,
+      percentage: item.percentage,
+    }))
+
+    return formattedData || []
+  } catch (error) {
+    console.error("Error inesperado al obtener gastos administrativos del cliente:", error)
+    return []
   }
 }

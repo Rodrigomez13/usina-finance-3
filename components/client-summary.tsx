@@ -5,6 +5,9 @@ import { getClientStats, getClientGroups } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ClientGroup, ClientStats } from "@/types/index"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
+import { ListFilter } from "lucide-react"
 
 // Datos de demostración para v0
 const demoClientStats: ClientStats = {
@@ -83,7 +86,8 @@ interface ClientSummaryProps {
   isV0?: boolean
 }
 
-export function ClientSummary() { // agregar parametro de from y To
+export function ClientSummary() {
+  // agregar parametro de from y To
   const [clientStats, setClientStats] = useState<ClientStats>({})
   const [clientGroups, setClientGroups] = useState<ClientGroup[]>([])
   const [loading, setLoading] = useState(true)
@@ -98,8 +102,6 @@ export function ClientSummary() { // agregar parametro de from y To
         setClientGroups(groups || [])
 
         // funcion para filtrar por fecha
-
-
       } catch (error) {
         console.error("Error al cargar datos de clientes:", error)
         setClientStats({})
@@ -182,11 +184,18 @@ interface ClientCardProps {
   }
 }
 
+// Modificar la función ClientCard para que el botón de ver detalles abra un modal
 function ClientCard({ name, stats }: ClientCardProps) {
   return (
     <Card className="bg-white border border-[#e8f3f1] shadow-sm hover:shadow-md transition-shadow duration-300">
-      <CardHeader className="border-b border-[#e8f3f1]">
+      <CardHeader className="border-b border-[#e8f3f1] flex justify-between items-center">
         <CardTitle className="text-[#0e6251]">{name}</CardTitle>
+        <Link href={`/clients/${encodeURIComponent(name)}`}>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <ListFilter className="h-4 w-4" />
+            <span className="sr-only">Ver registros</span>
+          </Button>
+        </Link>
       </CardHeader>
       <CardContent className="pt-4">
         <div className="space-y-2">

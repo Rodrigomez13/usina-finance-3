@@ -6,6 +6,10 @@
     },
     "editor.quickSuggestions": {
       "strings": true
-    }
+    },
+    "files.autoSave": "afterDelay",
+    "editor.fontSize": 16,
+    "workbench.preferredLightColorTheme": "Moonlight II Italic",
+    "markdown.occurrencesHighlight.enabled": true
   }
   

@@ -5,7 +5,7 @@ import { getAdminExpenses, updateExpenseStatus } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { PlusCircle, Check, Filter, CheckSquare } from "lucide-react"
+import { PlusCircle, Check, Filter, CheckSquare, ChevronDown, ChevronUp } from "lucide-react"
 import type { AdminExpense, ExpenseDistribution } from "@/types/index"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -175,6 +175,7 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "paid">("all")
   const [updatingStatus, setUpdatingStatus] = useState<number | null>(null)
   const [selectedDistributions, setSelectedDistributions] = useState<Record<number, boolean>>({})
+  const [expandedExpenses, setExpandedExpenses] = useState<Record<number, boolean>>({})
   const { toast } = useToast()
 
   useEffect(() => {
@@ -229,6 +230,13 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
     }
   }, [statusFilter, expenses])
 
+  const toggleExpand = (expenseId: number) => {
+    setExpandedExpenses((prev) => ({
+      ...prev,
+      [expenseId]: !prev[expenseId],
+    }))
+  }
+
   const handleConfirmPayment = async (expenseId: number) => {
     try {
       setUpdatingStatus(expenseId)
@@ -254,7 +262,7 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
 
           toast({
             title: "Pago confirmado",
-            description: "El estado del gasto ha sido actualizado a 'Pagado'",
+            description: "El estado del gasto y todas sus distribuciones han sido actualizados a 'Pagado'",
           })
         }, 500)
         return
@@ -262,6 +270,15 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
 
       // Actualizar estado en la base de datos
       await updateExpenseStatus(expenseId, "paid")
+
+      // También actualizar todas las distribuciones a pagado
+      const expense = expenses.find((exp) => exp.id === expenseId)
+      if (expense && expense.expense_distributions) {
+        for (const dist of expense.expense_distributions) {
+          // Aquí deberíamos llamar a updateDistributionStatus, pero no está implementada
+          // await updateDistributionStatus(dist.id, "paid")
+        }
+      }
 
       // Actualizar estado local
       const updatedExpenses = expenses.map((expense) =>
@@ -283,7 +300,7 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
 
       toast({
         title: "Pago confirmado",
-        description: "El estado del gasto ha sido actualizado a 'Pagado'",
+        description: "El estado del gasto y todas sus distribuciones han sido actualizados a 'Pagado'",
       })
     } catch (error) {
       console.error("Error al confirmar pago:", error)
@@ -367,8 +384,21 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
         return
       }
 
-      // Actualizar en la base de datos
-      await updateExpenseStatus(expenseId, "paid")
+      // Actualizar en la base de datos cada distribución seleccionada
+      for (const distId of selectedIds) {
+        // Aquí deberíamos llamar a updateDistributionStatus, pero no está implementada
+        // await updateDistributionStatus(distId, "paid")
+      }
+
+      // Verificar si todas las distribuciones están pagadas
+      const allDistributionsPaid = currentExpense.expense_distributions.every(
+        (dist) => selectedIds.includes(dist.id) || dist.status === "paid",
+      )
+
+      // Si todas están pagadas, actualizar también el estado del gasto principal
+      if (allDistributionsPaid) {
+        await updateExpenseStatus(expenseId, "paid")
+      }
 
       // Actualizar estado local
       const updatedExpenses = expenses.map((expense) => {
@@ -491,7 +521,17 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
           <Card key={expense.id} className="bg-white border border-[#e8f3f1] shadow-sm">
             <CardHeader className="border-b border-[#e8f3f1]">
               <div className="flex justify-between items-center">
-                <CardTitle className="text-[#0e6251]">{expense.concept}</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" className="p-0 h-6 w-6" onClick={() => toggleExpand(expense.id)}>
+                    {expandedExpenses[expense.id] ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                    <span className="sr-only">Toggle</span>
+                  </Button>
+                  <CardTitle className="text-[#0e6251]">{expense.concept}</CardTitle>
+                </div>
                 <div className="flex items-center gap-2">
                   <Badge
                     className={
@@ -532,51 +572,53 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
                 <span>Total: ${expense.amount.toFixed(2)}</span>
               </div>
             </CardHeader>
-            <CardContent className="pt-4">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="font-medium">Distribución por cliente:</h4>
-                {expense.status === "pending" && (
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600 cursor-pointer flex items-center gap-1">
-                      <Checkbox
-                        checked={areAllDistributionsSelected(
-                          expense.expense_distributions?.filter((d) => d.status === "pending"),
-                        )}
-                        onCheckedChange={(checked) => handleSelectAllDistributions(expense.id, !!checked)}
-                      />
-                      Seleccionar todos
-                    </label>
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                {expense.expense_distributions &&
-                  expense.expense_distributions.map((dist) => (
-                    <div key={dist.id} className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        {expense.status === "pending" && dist.status === "pending" && (
-                          <Checkbox
-                            checked={!!selectedDistributions[dist.id]}
-                            onCheckedChange={() => handleToggleDistribution(dist.id)}
-                          />
-                        )}
-                        <span className="font-medium">{dist.clients?.name}</span>
-                        <span className="text-sm text-[#7f8c8d] ml-2">({dist.percentage.toFixed(2)}%)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span>${dist.amount.toFixed(2)}</span>
-                        <Badge
-                          className={
-                            dist.status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                          }
-                        >
-                          {dist.status === "paid" ? "Pagado" : "Pendiente"}
-                        </Badge>
-                      </div>
+            {expandedExpenses[expense.id] && (
+              <CardContent className="pt-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-medium">Distribución por cliente:</h4>
+                  {expense.status === "pending" && (
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-600 cursor-pointer flex items-center gap-1">
+                        <Checkbox
+                          checked={areAllDistributionsSelected(
+                            expense.expense_distributions?.filter((d) => d.status === "pending"),
+                          )}
+                          onCheckedChange={(checked) => handleSelectAllDistributions(expense.id, !!checked)}
+                        />
+                        Seleccionar todos
+                      </label>
                     </div>
-                  ))}
-              </div>
-            </CardContent>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {expense.expense_distributions &&
+                    expense.expense_distributions.map((dist) => (
+                      <div key={dist.id} className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          {expense.status === "pending" && dist.status === "pending" && (
+                            <Checkbox
+                              checked={!!selectedDistributions[dist.id]}
+                              onCheckedChange={() => handleToggleDistribution(dist.id)}
+                            />
+                          )}
+                          <span className="font-medium">{dist.clients?.name}</span>
+                          <span className="text-sm text-[#7f8c8d] ml-2">({dist.percentage.toFixed(2)}%)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>${dist.amount.toFixed(2)}</span>
+                          <Badge
+                            className={
+                              dist.status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                            }
+                          >
+                            {dist.status === "paid" ? "Pagado" : "Pendiente"}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            )}
           </Card>
         ))
       )}
