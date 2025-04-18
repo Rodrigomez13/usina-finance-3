@@ -7,87 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ClientGroup, ClientStats } from "@/types/index"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { ListFilter } from "lucide-react"
-
-// Datos de demostración para v0
-const demoClientStats: ClientStats = {
-  Fenix: {
-    leads: 120,
-    expenses: 800.5,
-    funding: 1500.0,
-    balance: 699.5,
-  },
-  Eros: {
-    leads: 85,
-    expenses: 450.25,
-    funding: 1000.0,
-    balance: 549.75,
-  },
-  Fortuna: {
-    leads: 65,
-    expenses: 320.0,
-    funding: 800.0,
-    balance: 480.0,
-  },
-  Gana24: {
-    leads: 45,
-    expenses: 250.0,
-    funding: 600.0,
-    balance: 350.0,
-  },
-  Atenea: {
-    leads: 30,
-    expenses: 180.0,
-    funding: 400.0,
-    balance: 220.0,
-  },
-  Flashbet: {
-    leads: 20,
-    expenses: 150.0,
-    funding: 300.0,
-    balance: 150.0,
-  },
-}
-
-const demoClientGroups: ClientGroup[] = [
-  {
-    id: 1,
-    name: "Dueño 1",
-    owner: "Dueño 1",
-    clients: [
-      { id: 1, name: "Fenix", owner_id: 1, created_at: "" },
-      { id: 2, name: "Eros", owner_id: 1, created_at: "" },
-    ],
-  },
-  {
-    id: 2,
-    name: "Dueño 2",
-    owner: "Dueño 2",
-    clients: [
-      { id: 3, name: "Fortuna", owner_id: 2, created_at: "" },
-      { id: 4, name: "Gana24", owner_id: 2, created_at: "" },
-    ],
-  },
-  {
-    id: 3,
-    name: "Dueño 3",
-    owner: "Dueño 3",
-    clients: [{ id: 5, name: "Atenea", owner_id: 3, created_at: "" }],
-  },
-  {
-    id: 4,
-    name: "Dueño 4",
-    owner: "Dueño 4",
-    clients: [{ id: 6, name: "Flashbet", owner_id: 4, created_at: "" }],
-  },
-]
+import type { DateRange } from "react-day-picker"
 
 interface ClientSummaryProps {
-  isV0?: boolean
+  dateRange?: DateRange | undefined
 }
 
-export function ClientSummary() {
-  // agregar parametro de from y To
+export function ClientSummary({ dateRange }: ClientSummaryProps) {
   const [clientStats, setClientStats] = useState<ClientStats>({})
   const [clientGroups, setClientGroups] = useState<ClientGroup[]>([])
   const [loading, setLoading] = useState(true)
@@ -97,11 +23,14 @@ export function ClientSummary() {
       try {
         setLoading(true)
 
-        const [stats, groups] = await Promise.all([getClientStats(), getClientGroups()])
+        // Obtener fechas del rango o usar valores predeterminadas
+        const startDate = dateRange?.from || new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+        const endDate = dateRange?.to || new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+
+        const [stats, groups] = await Promise.all([getClientStats(startDate, endDate), getClientGroups()])
+
         setClientStats(stats || {})
         setClientGroups(groups || [])
-
-        // funcion para filtrar por fecha
       } catch (error) {
         console.error("Error al cargar datos de clientes:", error)
         setClientStats({})
@@ -112,7 +41,7 @@ export function ClientSummary() {
     }
 
     fetchData()
-  }, [])
+  }, [dateRange])
 
   if (loading) {
     return (
@@ -184,16 +113,18 @@ interface ClientCardProps {
   }
 }
 
-// Modificar la función ClientCard para que el botón de ver detalles abra un modal
 function ClientCard({ name, stats }: ClientCardProps) {
   return (
     <Card className="bg-white border border-[#e8f3f1] shadow-sm hover:shadow-md transition-shadow duration-300">
       <CardHeader className="border-b border-[#e8f3f1] flex justify-between items-center">
         <CardTitle className="text-[#0e6251]">{name}</CardTitle>
         <Link href={`/clients/${encodeURIComponent(name)}`}>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ListFilter className="h-4 w-4" />
-            <span className="sr-only">Ver registros</span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-[#148f77] hover:text-[#0e6251] hover:bg-[#f0f9f7] border-[#a2d9ce]"
+          >
+            Ver Detalles
           </Button>
         </Link>
       </CardHeader>

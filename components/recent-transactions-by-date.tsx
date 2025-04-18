@@ -1,13 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getRecentTransactions, getRecentTransactionsByDate } from "@/lib/api"
+import { getRecentTransactionsByDate } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import type { Transaction } from "@/types/index"
 
-
-interface RecentTransactionsProps {
+interface RecentTransactionsByDateProps {
   dateRange: {
     from: Date
     to: Date
@@ -24,7 +22,7 @@ interface TransactionByDate {
   notes: string
 }
 
-export function RecentTransactionsByDate({dateRange}: RecentTransactionsProps) {
+export function RecentTransactionsByDate({ dateRange }: RecentTransactionsByDateProps) {
   const [transactions, setTransactions] = useState<TransactionByDate[]>([])
   const [loading, setLoading] = useState(true)
 

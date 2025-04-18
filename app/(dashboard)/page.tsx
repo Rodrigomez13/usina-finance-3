@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CalendarDateRangePicker } from "@/components/date-range-picker"
-import { RecentTransactions } from "@/components/recent-transactions"
 import { ClientSummary } from "@/components/client-summary"
 import { AdminExpenses } from "@/components/admin-expenses"
 import { PlusCircle } from "lucide-react"
@@ -13,6 +12,9 @@ import { useEffect, useState } from "react"
 import { getDashboardStats } from "@/lib/api"
 // Importar el componente AuthDebug al principio del archivo
 import { AuthDebug } from "@/components/auth-debug"
+import type { DateRange } from "react-day-picker"
+// Import the new component
+import { RecentTransactionsByDate } from "../../components/recent-transactions-by-date"
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -22,11 +24,18 @@ export default function DashboardPage() {
     balance: 0,
   })
   const [loading, setLoading] = useState(true)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
+  })
 
   useEffect(() => {
     async function fetchStats() {
+      if (!dateRange?.from || !dateRange?.to) return
+
       try {
-        const dashboardStats = await getDashboardStats()
+        setLoading(true)
+        const dashboardStats = await getDashboardStats(dateRange.from, dateRange.to)
         setStats(dashboardStats)
       } catch (error) {
         console.error("Error fetching dashboard stats:", error)
@@ -36,14 +45,19 @@ export default function DashboardPage() {
     }
 
     fetchStats()
-  }, [])
+  }, [dateRange])
+
+  const handleDateChange = (newDateRange: DateRange | undefined) => {
+    console.log("Date range changed:", newDateRange)
+    setDateRange(newDateRange)
+  }
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight text-[#0e6251]">Dashboard Financiero</h2>
         <div className="flex items-center space-x-2">
-          <CalendarDateRangePicker />
+          <CalendarDateRangePicker onDateChange={handleDateChange} />
           <Link href="/transactions/new">
             <Button className="bg-[#148f77] hover:bg-[#0e6251] text-white">
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -86,8 +100,16 @@ export default function DashboardPage() {
                 <CardTitle className="text-sm font-medium text-[#34495e]">Total de Leads</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#148f77]">{stats.totalLeads}</div>
-                <p className="text-xs text-[#7f8c8d]">Actualizado en tiempo real</p>
+                {loading ? (
+                  <div className="h-8 bg-gray-200 animate-pulse rounded"></div>
+                ) : (
+                  <div className="text-2xl font-bold text-[#148f77]">{stats.totalLeads}</div>
+                )}
+                <p className="text-xs text-[#7f8c8d]">
+                  {dateRange?.from && dateRange?.to
+                    ? `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`
+                    : "Seleccione un rango de fechas"}
+                </p>
               </CardContent>
             </Card>
             <Card className="bg-white border border-[#e8f3f1] shadow-sm hover:shadow-md transition-shadow duration-300">
@@ -95,8 +117,16 @@ export default function DashboardPage() {
                 <CardTitle className="text-sm font-medium text-[#34495e]">Gastos Totales</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#148f77]">${stats.totalExpenses.toFixed(2)}</div>
-                <p className="text-xs text-[#7f8c8d]">Actualizado en tiempo real</p>
+                {loading ? (
+                  <div className="h-8 bg-gray-200 animate-pulse rounded"></div>
+                ) : (
+                  <div className="text-2xl font-bold text-[#148f77]">${stats.totalExpenses.toFixed(2)}</div>
+                )}
+                <p className="text-xs text-[#7f8c8d]">
+                  {dateRange?.from && dateRange?.to
+                    ? `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`
+                    : "Seleccione un rango de fechas"}
+                </p>
               </CardContent>
             </Card>
             <Card className="bg-white border border-[#e8f3f1] shadow-sm hover:shadow-md transition-shadow duration-300">
@@ -104,8 +134,16 @@ export default function DashboardPage() {
                 <CardTitle className="text-sm font-medium text-[#34495e]">Fondeos Recibidos</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#148f77]">${stats.totalFunding.toFixed(2)}</div>
-                <p className="text-xs text-[#7f8c8d]">Actualizado en tiempo real</p>
+                {loading ? (
+                  <div className="h-8 bg-gray-200 animate-pulse rounded"></div>
+                ) : (
+                  <div className="text-2xl font-bold text-[#148f77]">${stats.totalFunding.toFixed(2)}</div>
+                )}
+                <p className="text-xs text-[#7f8c8d]">
+                  {dateRange?.from && dateRange?.to
+                    ? `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`
+                    : "Seleccione un rango de fechas"}
+                </p>
               </CardContent>
             </Card>
             <Card className="bg-white border border-[#e8f3f1] shadow-sm hover:shadow-md transition-shadow duration-300">
@@ -113,8 +151,16 @@ export default function DashboardPage() {
                 <CardTitle className="text-sm font-medium text-[#34495e]">Balance Actual</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#148f77]">${stats.balance.toFixed(2)}</div>
-                <p className="text-xs text-[#7f8c8d]">Actualizado en tiempo real</p>
+                {loading ? (
+                  <div className="h-8 bg-gray-200 animate-pulse rounded"></div>
+                ) : (
+                  <div className="text-2xl font-bold text-[#148f77]">${stats.balance.toFixed(2)}</div>
+                )}
+                <p className="text-xs text-[#7f8c8d]">
+                  {dateRange?.from && dateRange?.to
+                    ? `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`
+                    : "Seleccione un rango de fechas"}
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -135,17 +181,18 @@ export default function DashboardPage() {
                 <CardTitle className="text-[#0e6251]">Transacciones Recientes</CardTitle>
                 <CardDescription className="text-[#7f8c8d]">Se muestran las últimas 5 transacciones</CardDescription>
               </CardHeader>
+              {/* Replace the RecentTransactions component with RecentTransactionsByDate */}
               <CardContent className="pt-6">
-                <RecentTransactions />
+                <RecentTransactionsByDate dateRange={dateRange} />
               </CardContent>
             </Card>
           </div>
         </TabsContent>
         <TabsContent value="clients" className="space-y-4">
-          <ClientSummary />
+          <ClientSummary dateRange={dateRange} />
         </TabsContent>
         <TabsContent value="expenses" className="space-y-4">
-          <AdminExpenses />
+          <AdminExpenses dateRange={dateRange} />
         </TabsContent>
         <TabsContent value="reports" className="space-y-4">
           <Card className="bg-white border border-[#e8f3f1] shadow-sm">

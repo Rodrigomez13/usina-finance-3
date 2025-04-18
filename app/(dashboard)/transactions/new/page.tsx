@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
 import { createTransaction } from "@/lib/api"
 import { useAuth } from "@/contexts/auth-context"
@@ -57,7 +57,7 @@ export default function NewTransactionPage() {
         console.error("No se pudo inicializar el cliente de Supabase")
         return
       }
-      
+
       const { data } = await supabase.from("clients").select("id, name").order("name")
       if (data) {
         setClients(data)

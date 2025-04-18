@@ -1,9 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import { CalendarIcon } from "lucide-react"
 import type { DateRange } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
@@ -16,13 +16,15 @@ interface CalendarDateRangePickerProps extends React.HTMLAttributes<HTMLDivEleme
   onDateChange?: (dateRange: DateRange | undefined) => void
 }
 
-export function CalendarDateRangePicker({
-  className,
-  onDateChange,
-}: CalendarDateRangePickerProps) {
+export function CalendarDateRangePicker({ className, onDateChange }: CalendarDateRangePickerProps) {
+  // Obtener el primer y último día del mes actual
+  const today = new Date()
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+
   const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(2025, 3, 1),
-    to: new Date(),
+    from: firstDayOfMonth,
+    to: lastDayOfMonth,
   })
 
   // Manejar cambios y notificar al padre
@@ -62,7 +64,7 @@ export function CalendarDateRangePicker({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={handleDateSelect}  // Usar el manejador personalizado
+            onSelect={handleDateSelect}
             numberOfMonths={2}
             locale={es}
           />

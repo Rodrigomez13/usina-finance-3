@@ -5,6 +5,7 @@ import { getRecentTransactions, getRecentAdminExpenses } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Transaction } from "@/types/index"
+import type { DateRange } from "react-day-picker"
 
 // Datos de demostración para v0
 const demoTransactions: Transaction[] = [
@@ -82,10 +83,11 @@ const demoTransactions: Transaction[] = [
 
 interface RecentTransactionsProps {
   isV0?: boolean
+  dateRange?: DateRange | undefined
 }
 
 // Modificar la función RecentTransactions para incluir gastos administrativos
-export function RecentTransactions({ isV0 = false }: RecentTransactionsProps) {
+export function RecentTransactions({ isV0 = false, dateRange }: RecentTransactionsProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [adminExpenses, setAdminExpenses] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,7 +97,7 @@ export function RecentTransactions({ isV0 = false }: RecentTransactionsProps) {
       try {
         setLoading(true)
 
-        // Si estamos en v0, usar datos de demostración
+        // If estamos en v0, usar datos de demostración
         if (isV0) {
           console.log("Usando transacciones de demostración para v0")
           setTimeout(() => {
@@ -123,8 +125,15 @@ export function RecentTransactions({ isV0 = false }: RecentTransactionsProps) {
           return
         }
 
+        // Obtener fechas del rango o usar valores predeterminados
+        const startDate = dateRange?.from || new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+        const endDate = dateRange?.to || new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+
         // Obtener transacciones y gastos administrativos
-        const [txData, expData] = await Promise.all([getRecentTransactions(), getRecentAdminExpenses()])
+        const [txData, expData] = await Promise.all([
+          getRecentTransactions(startDate, endDate),
+          getRecentAdminExpenses(startDate, endDate),
+        ])
 
         setTransactions(txData || [])
         setAdminExpenses(expData || [])
@@ -138,7 +147,7 @@ export function RecentTransactions({ isV0 = false }: RecentTransactionsProps) {
     }
 
     fetchData()
-  }, [isV0])
+  }, [isV0, dateRange])
 
   // Combinar transacciones y gastos administrativos, y ordenar por fecha
   const combinedItems = [...transactions, ...adminExpenses]
