@@ -2,18 +2,19 @@
 
 import { useEffect, useState } from "react"
 import { getClientStats, getClientGroups } from "@/lib/api"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ClientGroup, ClientStats } from "@/types/index"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import type { DateRange } from "react-day-picker"
+import { ClientCard } from "./client-card"
 
 interface ClientSummaryProps {
-  dateRange?: DateRange | undefined
+  isV0?: boolean
+  dateRange?: {
+    from: Date
+    to: Date
+  }
 }
 
-export function ClientSummary({ dateRange }: ClientSummaryProps) {
+export function ClientSummary({ isV0 = false, dateRange }: ClientSummaryProps) {
   const [clientStats, setClientStats] = useState<ClientStats>({})
   const [clientGroups, setClientGroups] = useState<ClientGroup[]>([])
   const [loading, setLoading] = useState(true)
@@ -23,14 +24,11 @@ export function ClientSummary({ dateRange }: ClientSummaryProps) {
       try {
         setLoading(true)
 
-        // Obtener fechas del rango o usar valores predeterminadas
-        const startDate = dateRange?.from || new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-        const endDate = dateRange?.to || new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
-
-        const [stats, groups] = await Promise.all([getClientStats(startDate, endDate), getClientGroups()])
-
+        const [stats, groups] = await Promise.all([getClientStats(), getClientGroups()])
         setClientStats(stats || {})
         setClientGroups(groups || [])
+
+        // funcion para filtrar por fecha
       } catch (error) {
         console.error("Error al cargar datos de clientes:", error)
         setClientStats({})
@@ -41,16 +39,13 @@ export function ClientSummary({ dateRange }: ClientSummaryProps) {
     }
 
     fetchData()
-  }, [dateRange])
+  }, [])
 
   if (loading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {[...Array(6)].map((_, i) => (
-          <Card key={i} className="bg-gray-50 animate-pulse">
-            <CardHeader className="h-16"></CardHeader>
-            <CardContent className="h-32"></CardContent>
-          </Card>
+          <div key={i} className="bg-gray-50 animate-pulse h-48 rounded-lg"></div>
         ))}
       </div>
     )
@@ -79,9 +74,19 @@ export function ClientSummary({ dateRange }: ClientSummaryProps) {
 
         <TabsContent value="all" className="mt-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {Object.entries(clientStats).map(([clientName, stats]) => (
-              <ClientCard key={clientName} name={clientName} stats={stats} />
-            ))}
+            {Object.entries(clientStats).map(([clientName, stats]) => {
+              // Buscar el ID del cliente en los grupos
+              let clientId = 0
+              for (const group of clientGroups) {
+                const client = group.clients.find((c) => c.name === clientName)
+                if (client) {
+                  clientId = client.id
+                  break
+                }
+              }
+
+              return <ClientCard key={clientName} name={clientName} id={clientId} stats={stats} dateRange={dateRange} />
+            })}
           </div>
         </TabsContent>
 
@@ -92,7 +97,9 @@ export function ClientSummary({ dateRange }: ClientSummaryProps) {
                 <ClientCard
                   key={client.id}
                   name={client.name}
+                  id={client.id}
                   stats={clientStats[client.name] || { leads: 0, expenses: 0, funding: 0, balance: 0 }}
+                  dateRange={dateRange}
                 />
               ))}
             </div>
@@ -100,56 +107,5 @@ export function ClientSummary({ dateRange }: ClientSummaryProps) {
         ))}
       </Tabs>
     </div>
-  )
-}
-
-interface ClientCardProps {
-  name: string
-  stats: {
-    leads: number
-    expenses: number
-    funding: number
-    balance: number
-  }
-}
-
-function ClientCard({ name, stats }: ClientCardProps) {
-  return (
-    <Card className="bg-white border border-[#e8f3f1] shadow-sm hover:shadow-md transition-shadow duration-300">
-      <CardHeader className="border-b border-[#e8f3f1] flex justify-between items-center">
-        <CardTitle className="text-[#0e6251]">{name}</CardTitle>
-        <Link href={`/clients/${encodeURIComponent(name)}`}>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-[#148f77] hover:text-[#0e6251] hover:bg-[#f0f9f7] border-[#a2d9ce]"
-          >
-            Ver Detalles
-          </Button>
-        </Link>
-      </CardHeader>
-      <CardContent className="pt-4">
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-[#7f8c8d]">Leads:</span>
-            <span className="font-medium">{stats.leads}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#7f8c8d]">Gastos:</span>
-            <span className="font-medium">${stats.expenses.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#7f8c8d]">Fondeos:</span>
-            <span className="font-medium">${stats.funding.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between pt-2 border-t border-[#e8f3f1]">
-            <span className="font-bold text-[#34495e]">Balance:</span>
-            <span className={`font-bold ${stats.balance >= 0 ? "text-[#148f77]" : "text-[#e74c3c]"}`}>
-              ${stats.balance.toFixed(2)}
-            </span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   )
 }

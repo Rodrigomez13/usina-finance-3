@@ -9,6 +9,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Sistema de Gestión Financiera",
   description: "Control de finanzas para empresa de publicidad",
+    generator: 'v0.dev'
 }
 
 export default function RootLayout({

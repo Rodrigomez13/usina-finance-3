@@ -24,7 +24,7 @@ export function NavBar() {
   }
 
   return (
-    <header className="border-b border-[#a2d9ce] nav-gradient shadow-sm">
+    <header className="border-b border-[#54a494] bg-[#0e6251] nav-gradient shadow-sm">
       <div className="flex h-16 items-center px-4 container mx-auto">
         <div className="flex items-center">
           <BarChart3 className="h-6 w-6 text-white mr-2" />
@@ -50,7 +50,7 @@ export function NavBar() {
                   <p className="text-xs leading-none text-[#7f8c8d]">ID: {user?.id?.substring(0, 8) || "N/A"}</p>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-[#e8f3f1]" />
+              <DropdownMenuSeparator className="bg-[#6cb2a5]" />
               <DropdownMenuItem className="text-[#34495e] hover:bg-[#f0f9f7] hover:text-[#0e6251] cursor-pointer">
                 <User className="mr-2 h-4 w-4 text-[#45b39d]" />
                 <span>Perfil</span>

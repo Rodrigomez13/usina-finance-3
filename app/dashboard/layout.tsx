@@ -56,7 +56,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f5f9f8]">
+    <div className="flex min-h-screen flex-col bg-[#eaf4f1]">
       <NavBar />
       <main className="flex-1 p-4">{children}</main>
       <Toasts />

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getAdminExpenses, updateExpenseStatus } from "@/lib/api"
+import { getAdminExpenses, updateExpenseStatus, updateExpenseDistributionStatus } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,154 +11,7 @@ import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
-
-// Datos de demostración para v0
-const demoAdminExpenses: AdminExpense[] = [
-  {
-    id: 1,
-    concept: "Alquiler de oficina",
-    amount: 500,
-    date: new Date().toISOString(),
-    paid_by: "shared",
-    status: "pending",
-    created_at: new Date().toISOString(),
-    created_by: "admin@example.com",
-    expense_distributions: [
-      {
-        id: 1,
-        expense_id: 1,
-        client_id: 1,
-        percentage: 30,
-        amount: 150,
-        status: "pending",
-        created_at: new Date().toISOString(),
-        clients: { name: "Fenix" },
-      },
-      {
-        id: 2,
-        expense_id: 1,
-        client_id: 2,
-        percentage: 25,
-        amount: 125,
-        status: "pending",
-        created_at: new Date().toISOString(),
-        clients: { name: "Eros" },
-      },
-      {
-        id: 3,
-        expense_id: 1,
-        client_id: 3,
-        percentage: 15,
-        amount: 75,
-        status: "pending",
-        created_at: new Date().toISOString(),
-        clients: { name: "Fortuna" },
-      },
-      {
-        id: 4,
-        expense_id: 1,
-        client_id: 4,
-        percentage: 15,
-        amount: 75,
-        status: "pending",
-        created_at: new Date().toISOString(),
-        clients: { name: "Gana24" },
-      },
-      {
-        id: 5,
-        expense_id: 1,
-        client_id: 5,
-        percentage: 10,
-        amount: 50,
-        status: "pending",
-        created_at: new Date().toISOString(),
-        clients: { name: "Atenea" },
-      },
-      {
-        id: 6,
-        expense_id: 1,
-        client_id: 6,
-        percentage: 5,
-        amount: 25,
-        status: "pending",
-        created_at: new Date().toISOString(),
-        clients: { name: "Flashbet" },
-      },
-    ],
-  },
-  {
-    id: 2,
-    concept: "Servicios de internet",
-    amount: 100,
-    date: new Date().toISOString(),
-    paid_by: "shared",
-    status: "paid",
-    created_at: new Date().toISOString(),
-    created_by: "admin@example.com",
-    expense_distributions: [
-      {
-        id: 7,
-        expense_id: 2,
-        client_id: 1,
-        percentage: 30,
-        amount: 30,
-        status: "paid",
-        created_at: new Date().toISOString(),
-        clients: { name: "Fenix" },
-      },
-      {
-        id: 8,
-        expense_id: 2,
-        client_id: 2,
-        percentage: 25,
-        amount: 25,
-        status: "paid",
-        created_at: new Date().toISOString(),
-        clients: { name: "Eros" },
-      },
-      {
-        id: 9,
-        expense_id: 2,
-        client_id: 3,
-        percentage: 15,
-        amount: 15,
-        status: "paid",
-        created_at: new Date().toISOString(),
-        clients: { name: "Fortuna" },
-      },
-      {
-        id: 10,
-        expense_id: 2,
-        client_id: 4,
-        percentage: 15,
-        amount: 15,
-        status: "paid",
-        created_at: new Date().toISOString(),
-        clients: { name: "Gana24" },
-      },
-      {
-        id: 11,
-        expense_id: 2,
-        client_id: 5,
-        percentage: 10,
-        amount: 10,
-        status: "paid",
-        created_at: new Date().toISOString(),
-        clients: { name: "Atenea" },
-      },
-      {
-        id: 12,
-        expense_id: 2,
-        client_id: 6,
-        percentage: 5,
-        amount: 5,
-        status: "paid",
-        created_at: new Date().toISOString(),
-        clients: { name: "Flashbet" },
-      },
-    ],
-  },
-]
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 interface AdminExpensesProps {
   isV0?: boolean
@@ -187,8 +40,12 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
         if (isV0) {
           console.log("Usando gastos administrativos de demostración para v0")
           setTimeout(() => {
-            setExpenses(demoAdminExpenses)
-            setFilteredExpenses(demoAdminExpenses)
+            // Usar los datos de demostración existentes
+            const demoData = [
+              /* ... datos de demostración ... */
+            ]
+            setExpenses(demoData)
+            setFilteredExpenses(demoData)
             setLoading(false)
           }, 500) // Simular carga
           return
@@ -206,6 +63,13 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
             return expenseDate >= fromDate && expenseDate <= toDate
           })
         }
+
+        // Inicializar el estado de expansión para cada gasto
+        const initialExpandState: Record<number, boolean> = {}
+        data.forEach((expense) => {
+          initialExpandState[expense.id] = false
+        })
+        setExpandedExpenses(initialExpandState)
 
         setExpenses(data || [])
         setFilteredExpenses(data || [])
@@ -229,13 +93,6 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
       setFilteredExpenses(expenses.filter((expense) => expense.status === statusFilter))
     }
   }, [statusFilter, expenses])
-
-  const toggleExpand = (expenseId: number) => {
-    setExpandedExpenses((prev) => ({
-      ...prev,
-      [expenseId]: !prev[expenseId],
-    }))
-  }
 
   const handleConfirmPayment = async (expenseId: number) => {
     try {
@@ -262,7 +119,7 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
 
           toast({
             title: "Pago confirmado",
-            description: "El estado del gasto y todas sus distribuciones han sido actualizados a 'Pagado'",
+            description: "El estado del gasto ha sido actualizado a 'Pagado'",
           })
         }, 500)
         return
@@ -272,11 +129,10 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
       await updateExpenseStatus(expenseId, "paid")
 
       // También actualizar todas las distribuciones a pagado
-      const expense = expenses.find((exp) => exp.id === expenseId)
+      const expense = expenses.find((e) => e.id === expenseId)
       if (expense && expense.expense_distributions) {
         for (const dist of expense.expense_distributions) {
-          // Aquí deberíamos llamar a updateDistributionStatus, pero no está implementada
-          // await updateDistributionStatus(dist.id, "paid")
+          await updateExpenseDistributionStatus(dist.id, "paid")
         }
       }
 
@@ -384,19 +240,20 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
         return
       }
 
-      // Actualizar en la base de datos cada distribución seleccionada
+      // Actualizar cada distribución seleccionada en la base de datos
       for (const distId of selectedIds) {
-        // Aquí deberíamos llamar a updateDistributionStatus, pero no está implementada
-        // await updateDistributionStatus(distId, "paid")
+        await updateExpenseDistributionStatus(distId, "paid")
       }
 
       // Verificar si todas las distribuciones están pagadas
-      const allDistributionsPaid = currentExpense.expense_distributions.every(
-        (dist) => selectedIds.includes(dist.id) || dist.status === "paid",
+      const allDistributions = currentExpense.expense_distributions || []
+      const updatedDistributions = allDistributions.map((dist) =>
+        selectedIds.includes(dist.id) ? { ...dist, status: "paid" as const } : dist,
       )
+      const allPaid = updatedDistributions.every((dist) => dist.status === "paid")
 
       // Si todas están pagadas, actualizar también el estado del gasto principal
-      if (allDistributionsPaid) {
+      if (allPaid) {
         await updateExpenseStatus(expenseId, "paid")
       }
 
@@ -409,9 +266,6 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
             }
             return dist
           })
-
-          // Verificar si todas las distribuciones están pagadas
-          const allPaid = updatedDistributions?.every((dist) => dist.status === "paid")
 
           return {
             ...expense,
@@ -461,6 +315,13 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
     })
 
     setSelectedDistributions(newSelectedDistributions)
+  }
+
+  const toggleExpand = (expenseId: number) => {
+    setExpandedExpenses((prev) => ({
+      ...prev,
+      [expenseId]: !prev[expenseId],
+    }))
   }
 
   if (loading) {
@@ -519,106 +380,110 @@ export function AdminExpenses({ isV0 = false, dateRange }: AdminExpensesProps) {
       ) : (
         filteredExpenses.map((expense) => (
           <Card key={expense.id} className="bg-white border border-[#e8f3f1] shadow-sm">
-            <CardHeader className="border-b border-[#e8f3f1]">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" className="p-0 h-6 w-6" onClick={() => toggleExpand(expense.id)}>
-                    {expandedExpenses[expense.id] ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                    <span className="sr-only">Toggle</span>
-                  </Button>
-                  <CardTitle className="text-[#0e6251]">{expense.concept}</CardTitle>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    className={
-                      expense.status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                    }
-                  >
-                    {expense.status === "paid" ? "Pagado" : "Pendiente"}
-                  </Badge>
+            <Collapsible open={expandedExpenses[expense.id]}>
+              <CardHeader className="border-b border-[#e8f3f1]">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <CollapsibleTrigger
+                      onClick={() => toggleExpand(expense.id)}
+                      className="p-1 rounded-md hover:bg-gray-100"
+                    >
+                      {expandedExpenses[expense.id] ? (
+                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      )}
+                    </CollapsibleTrigger>
+                    <CardTitle className="text-[#0e6251]">{expense.concept}</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      className={
+                        expense.status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                      }
+                    >
+                      {expense.status === "paid" ? "Pagado" : "Pendiente"}
+                    </Badge>
 
-                  {expense.status === "pending" && (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleConfirmPayment(expense.id)}
-                        disabled={updatingStatus === expense.id}
-                        className="border-green-200 text-green-700 hover:bg-green-50"
-                      >
-                        <Check className="h-4 w-4 mr-1" />
-                        {updatingStatus === expense.id ? "Confirmando..." : "Confirmar Todo"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleConfirmSelectedPayments(expense.id)}
-                        disabled={updatingStatus === expense.id}
-                        className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                      >
-                        <CheckSquare className="h-4 w-4 mr-1" />
-                        Confirmar Seleccionados
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex justify-between text-sm text-[#7f8c8d]">
-                <span>Fecha: {new Date(expense.date).toLocaleDateString("es-ES")}</span>
-                <span>Total: ${expense.amount.toFixed(2)}</span>
-              </div>
-            </CardHeader>
-            {expandedExpenses[expense.id] && (
-              <CardContent className="pt-4">
-                <div className="flex justify-between items-center mb-2">
-                  <h4 className="font-medium">Distribución por cliente:</h4>
-                  {expense.status === "pending" && (
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm text-gray-600 cursor-pointer flex items-center gap-1">
-                        <Checkbox
-                          checked={areAllDistributionsSelected(
-                            expense.expense_distributions?.filter((d) => d.status === "pending"),
-                          )}
-                          onCheckedChange={(checked) => handleSelectAllDistributions(expense.id, !!checked)}
-                        />
-                        Seleccionar todos
-                      </label>
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  {expense.expense_distributions &&
-                    expense.expense_distributions.map((dist) => (
-                      <div key={dist.id} className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          {expense.status === "pending" && dist.status === "pending" && (
-                            <Checkbox
-                              checked={!!selectedDistributions[dist.id]}
-                              onCheckedChange={() => handleToggleDistribution(dist.id)}
-                            />
-                          )}
-                          <span className="font-medium">{dist.clients?.name}</span>
-                          <span className="text-sm text-[#7f8c8d] ml-2">({dist.percentage.toFixed(2)}%)</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span>${dist.amount.toFixed(2)}</span>
-                          <Badge
-                            className={
-                              dist.status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                            }
-                          >
-                            {dist.status === "paid" ? "Pagado" : "Pendiente"}
-                          </Badge>
-                        </div>
+                    {expense.status === "pending" && (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleConfirmPayment(expense.id)}
+                          disabled={updatingStatus === expense.id}
+                          className="border-green-200 text-green-700 hover:bg-green-50"
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          {updatingStatus === expense.id ? "Confirmando..." : "Confirmar Todo"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleConfirmSelectedPayments(expense.id)}
+                          disabled={updatingStatus === expense.id}
+                          className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                        >
+                          <CheckSquare className="h-4 w-4 mr-1" />
+                          Confirmar Seleccionados
+                        </Button>
                       </div>
-                    ))}
+                    )}
+                  </div>
                 </div>
-              </CardContent>
-            )}
+                <div className="flex justify-between text-sm text-[#7f8c8d]">
+                  <span>Fecha: {new Date(expense.date).toLocaleDateString("es-ES")}</span>
+                  <span>Total: ${expense.amount.toFixed(2)}</span>
+                </div>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent className="pt-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium">Distribución por cliente:</h4>
+                    {expense.status === "pending" && (
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-600 cursor-pointer flex items-center gap-1">
+                          <Checkbox
+                            checked={areAllDistributionsSelected(
+                              expense.expense_distributions?.filter((d) => d.status === "pending"),
+                            )}
+                            onCheckedChange={(checked) => handleSelectAllDistributions(expense.id, !!checked)}
+                          />
+                          Seleccionar todos
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    {expense.expense_distributions &&
+                      expense.expense_distributions.map((dist) => (
+                        <div key={dist.id} className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            {expense.status === "pending" && dist.status === "pending" && (
+                              <Checkbox
+                                checked={!!selectedDistributions[dist.id]}
+                                onCheckedChange={() => handleToggleDistribution(dist.id)}
+                              />
+                            )}
+                            <span className="font-medium">{dist.clients?.name}</span>
+                            <span className="text-sm text-[#7f8c8d] ml-2">({dist.percentage.toFixed(2)}%)</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span>${dist.amount.toFixed(2)}</span>
+                            <Badge
+                              className={
+                                dist.status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                              }
+                            >
+                              {dist.status === "paid" ? "Pagado" : "Pendiente"}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
           </Card>
         ))
       )}

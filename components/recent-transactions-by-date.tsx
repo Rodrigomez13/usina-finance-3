@@ -5,7 +5,7 @@ import { getRecentTransactionsByDate } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-interface RecentTransactionsByDateProps {
+interface RecentTransactionsProps {
   dateRange: {
     from: Date
     to: Date
@@ -22,7 +22,7 @@ interface TransactionByDate {
   notes: string
 }
 
-export function RecentTransactionsByDate({ dateRange }: RecentTransactionsByDateProps) {
+export function RecentTransactionsByDate({ dateRange }: RecentTransactionsProps) {
   const [transactions, setTransactions] = useState<TransactionByDate[]>([])
   const [loading, setLoading] = useState(true)
 

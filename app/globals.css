@@ -1,129 +1,76 @@
-/* Tailwind directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Root variables */
-:root {
-  /* Green color palette */
-  --color-mint-light: #d5f5e3;
-  --color-mint: #a2d9ce;
-  --color-teal-light: #45b39d;
-  --color-teal: #148f77;
-  --color-teal-dark: #0e6251;
-  --color-accent: #7dcea0;
-
-  /* Text colors */
-  --color-text-dark: #2c3e50;
-  --color-text-medium: #34495e;
-  --color-text-light: #7f8c8d;
-
-  /* Background colors */
-  --color-background: #f5f9f8;
-  --color-card: #ffffff;
-  --color-card-hover: #f8fcfb;
-
-  /* shadcn variables */
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 170 80% 30%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 170 80% 30%;
-  --radius: 0.5rem;
-}
-
-.dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 170 80% 30%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 170 80% 30%;
-}
-
-/* Base styles */
 @layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
   body {
-    background-color: #f5f9f8;
-    color: #2c3e50;
+    @apply bg-background text-foreground;
   }
-}
-
-/* Component styles */
-@layer components {
-  .card {
-    @apply bg-white rounded-lg border border-[#e8f3f1] shadow-sm hover:shadow-md transition-shadow duration-300;
-  }
-
-  .btn-primary {
-    @apply bg-[#148f77] hover:bg-[#0e6251] text-white transition-colors duration-200;
-  }
-
-  .btn-secondary {
-    @apply bg-[#7dcea0] hover:bg-[#45b39d] text-white transition-colors duration-200;
-  }
-
-  .btn-outline {
-    @apply border border-[#a2d9ce] text-[#148f77] hover:bg-[#f0f9f7] transition-colors duration-200;
-  }
-
-  .input-field {
-    @apply border border-[#a2d9ce] focus:ring-2 focus:ring-[#45b39d] focus:border-transparent rounded-md;
-  }
-
-  .section-title {
-    @apply text-2xl font-bold text-[#0e6251] mb-4;
-  }
-
-  .stat-card {
-    @apply bg-white p-4 rounded-lg border border-[#e8f3f1] shadow-sm;
-  }
-
-  .stat-value {
-    @apply text-2xl font-bold text-[#148f77];
-  }
-
-  .stat-label {
-    @apply text-sm text-[#7f8c8d];
-  }
-}
-
-/* Custom gradients and backgrounds */
-.gradient-bg {
-  background: linear-gradient(135deg, var(--color-teal-light), var(--color-teal));
-}
-
-.card-gradient {
-  background: linear-gradient(135deg, rgba(162, 217, 206, 0.05), rgba(69, 179, 157, 0.05));
-}
-
-.nav-gradient {
-  background: linear-gradient(to right, var(--color-teal), var(--color-teal-dark));
 }
