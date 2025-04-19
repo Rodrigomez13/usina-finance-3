@@ -91,16 +91,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (supabase && !subscriptionRef.current) {
       const { data } = supabase.auth.onAuthStateChange((_event, session) => {
         console.log("Cambio en el estado de autenticación:", _event, session?.user?.email)
-        setSession(session)
-        setUser(session?.user ?? null)
-        setLoading(false)
 
-        // Solo redirigir si no se ha redirigido antes y la verificación inicial se ha completado
-        if (_event === "SIGNED_IN" && !redirectedRef.current && authCheckDoneRef.current) {
-          console.log("Usuario ha iniciado sesión, redirigiendo al dashboard...")
+        // Solo actualizar el estado si hay un cambio real
+        if (_event === "SIGNED_IN" || _event === "SIGNED_OUT" || _event === "TOKEN_REFRESHED") {
+          setSession(session)
+          setUser(session?.user ?? null)
+          setLoading(false)
+        }
+
+        // Solo redirigir en caso de inicio o cierre de sesión explícito, no en actualizaciones de token
+        if (_event === "SIGNED_IN" && !redirectedRef.current && authCheckDoneRef.current && !session?.user) {
+          console.log("Usuario ha iniciado sesión explícitamente, redirigiendo al dashboard...")
           redirectedRef.current = true
 
-          // Usar setTimeout para dar tiempo a que se complete la autenticación
           setTimeout(() => {
             router.push("/dashboard")
             resetRedirectState()

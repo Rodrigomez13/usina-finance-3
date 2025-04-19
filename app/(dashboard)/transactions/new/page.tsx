@@ -11,12 +11,13 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, Save, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { createTransaction } from "@/lib/api"
 import { useAuth } from "@/contexts/auth-context"
 import { getSupabaseClient } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { apiCache } from "@/lib/cache"
 
 interface Client {
   id: number
@@ -29,7 +30,6 @@ interface FormData {
   amount: string
   notes: string
   payment_method: string
-  category: string
   cost_per_lead: string
 }
 
@@ -40,13 +40,13 @@ export default function NewTransactionPage() {
   const [transactionType, setTransactionType] = useState("funding")
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(false)
+  const [calculatedAmount, setCalculatedAmount] = useState<number | null>(null)
   const [formData, setFormData] = useState<FormData>({
     client_id: "",
     date: new Date().toISOString().split("T")[0],
     amount: "",
     notes: "",
     payment_method: "transfer",
-    category: "advertising",
     cost_per_lead: "",
   })
 
@@ -69,6 +69,23 @@ export default function NewTransactionPage() {
 
     loadClients()
   }, [])
+
+  // Calcular el monto total cuando cambia la cantidad de leads o el costo por lead
+  useEffect(() => {
+    if (transactionType === "lead" && formData.amount && formData.cost_per_lead) {
+      const leads = Number.parseFloat(formData.amount)
+      const costPerLead = Number.parseFloat(formData.cost_per_lead)
+
+      if (!isNaN(leads) && !isNaN(costPerLead)) {
+        const total = leads * costPerLead
+        setCalculatedAmount(total)
+      } else {
+        setCalculatedAmount(null)
+      }
+    } else {
+      setCalculatedAmount(null)
+    }
+  }, [transactionType, formData.amount, formData.cost_per_lead])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target
@@ -95,46 +112,78 @@ export default function NewTransactionPage() {
         return
       }
 
+      if (transactionType === "lead" && !formData.cost_per_lead) {
+        toast({
+          title: "Error",
+          description: "Por favor ingrese el costo por lead",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+
       // Preparar datos para guardar
-      const transaction: {
-        client_id: number
-        type: "funding" | "expense" | "lead"
-        amount: number
-        date: string
-        notes: string | null
-        created_by: string
-        payment_method?: string
-        category?: string
-        cost_per_lead?: number | null
-      } = {
-        client_id: Number.parseInt(formData.client_id),
-        type: transactionType as "funding" | "expense" | "lead",
-        amount: Number.parseFloat(formData.amount),
-        date: formData.date,
-        notes: formData.notes || null,
-        created_by: user?.email || "sistema",
-      }
+      const clientId = Number.parseInt(formData.client_id)
+      const leads = transactionType === "lead" ? Number.parseFloat(formData.amount) : 0
+      const costPerLead = transactionType === "lead" ? Number.parseFloat(formData.cost_per_lead) : null
+      const expenseAmount = calculatedAmount || 0
 
-      // Agregar campos específicos según el tipo
-      if (transactionType === "funding" || transactionType === "expense") {
-        transaction.payment_method = formData.payment_method
-      }
-
-      if (transactionType === "expense") {
-        transaction.category = formData.category
-      }
-
+      // Si es un registro de leads, crear dos transacciones: una para los leads y otra para el gasto
       if (transactionType === "lead") {
-        transaction.cost_per_lead = formData.cost_per_lead ? Number.parseFloat(formData.cost_per_lead) : null
+        // Transacción de leads
+        const leadTransaction = {
+          client_id: clientId,
+          type: "lead" as const,
+          amount: leads,
+          date: formData.date,
+          notes: formData.notes || `Registro de ${leads} leads`,
+          created_by: user?.email || "sistema",
+        }
+
+        // Transacción de gasto por publicidad
+        const expenseTransaction = {
+          client_id: clientId,
+          type: "expense" as const,
+          amount: expenseAmount,
+          date: formData.date,
+          notes: formData.notes || `Gasto por ${leads} leads`,
+          payment_method: "transfer",
+          category: "advertising",
+          cost_per_lead: costPerLead,
+          created_by: user?.email || "sistema",
+        }
+
+        // Guardar ambas transacciones
+        await createTransaction(leadTransaction)
+        await createTransaction(expenseTransaction)
+
+        toast({
+          title: "Transacciones guardadas",
+          description: `Se han registrado ${leads} leads y un gasto de $${expenseAmount.toFixed(2)}`,
+        })
+      } else {
+        // Para fondeo o gasto normal
+        const transaction = {
+          client_id: clientId,
+          type: transactionType as "funding" | "expense",
+          amount: Number.parseFloat(formData.amount),
+          date: formData.date,
+          notes: formData.notes || null,
+          payment_method: formData.payment_method,
+          category: transactionType === "expense" ? "advertising" : undefined,
+          created_by: user?.email || "sistema",
+        }
+
+        await createTransaction(transaction)
+
+        toast({
+          title: "Transacción guardada",
+          description: "La transacción se ha registrado correctamente",
+        })
       }
 
-      // Guardar transacción
-      await createTransaction(transaction)
-
-      toast({
-        title: "Transacción guardada",
-        description: "La transacción se ha registrado correctamente",
-      })
+      // Invalidar la caché para que se actualicen los datos
+      apiCache.invalidatePattern(/^dashboard_stats|^client_stats|^recent_transactions/)
 
       router.push("/")
     } catch (error) {
@@ -166,7 +215,7 @@ export default function NewTransactionPage() {
       </div>
 
       <Tabs defaultValue="funding" onValueChange={setTransactionType} className="space-y-6">
-        <TabsList className="grid grid-cols-3 w-full max-w-md dark:bg-finance-900 dark:border dark:border-finance-800">
+        <TabsList className="grid grid-cols-2 w-full max-w-md dark:bg-finance-900 dark:border dark:border-finance-800">
           <TabsTrigger
             value="funding"
             className="dark:data-[state=active]:bg-lilac-700 dark:data-[state=active]:text-white dark:text-lilac-200"
@@ -174,16 +223,10 @@ export default function NewTransactionPage() {
             Fondeo
           </TabsTrigger>
           <TabsTrigger
-            value="expense"
-            className="dark:data-[state=active]:bg-lilac-700 dark:data-[state=active]:text-white dark:text-lilac-200"
-          >
-            Gasto
-          </TabsTrigger>
-          <TabsTrigger
             value="lead"
             className="dark:data-[state=active]:bg-lilac-700 dark:data-[state=active]:text-white dark:text-lilac-200"
           >
-            Leads
+            Leads y Gastos
           </TabsTrigger>
         </TabsList>
 
@@ -192,13 +235,12 @@ export default function NewTransactionPage() {
             <CardHeader className="dark:border-b dark:border-finance-800">
               <CardTitle className="dark:text-white">
                 {transactionType === "funding" && "Registrar Nuevo Fondeo"}
-                {transactionType === "expense" && "Registrar Nuevo Gasto"}
-                {transactionType === "lead" && "Registrar Nuevos Leads"}
+                {transactionType === "lead" && "Registrar Leads y Gastos de Publicidad"}
               </CardTitle>
               <CardDescription className="dark:text-lilac-300">
                 {transactionType === "funding" && "Ingrese los detalles del fondeo recibido de un cliente"}
-                {transactionType === "expense" && "Ingrese los detalles del gasto realizado para un cliente"}
-                {transactionType === "lead" && "Ingrese los detalles de los leads enviados a un cliente"}
+                {transactionType === "lead" &&
+                  "Ingrese los detalles de los leads y se calculará automáticamente el gasto"}
               </CardDescription>
             </CardHeader>
 
@@ -246,22 +288,23 @@ export default function NewTransactionPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="amount" className="dark:text-lilac-200">
-                    {transactionType === "lead" ? "Cantidad de Leads" : "Monto"}
-                  </Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    placeholder={transactionType === "lead" ? "Ej: 100" : "Ej: 1000.00"}
-                    value={formData.amount}
-                    onChange={handleChange}
-                    className="dark:bg-finance-900 dark:border-finance-800 dark:text-white"
-                  />
-                </div>
+              {transactionType === "funding" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="amount" className="dark:text-lilac-200">
+                      Monto
+                    </Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ej: 1000.00"
+                      value={formData.amount}
+                      onChange={handleChange}
+                      className="dark:bg-finance-900 dark:border-finance-800 dark:text-white"
+                    />
+                  </div>
 
-                {transactionType !== "lead" && (
                   <div className="space-y-2">
                     <Label htmlFor="payment_method" className="dark:text-lilac-200">
                       Método de Pago
@@ -292,9 +335,23 @@ export default function NewTransactionPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="amount" className="dark:text-lilac-200">
+                      Cantidad de Leads
+                    </Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      placeholder="Ej: 100"
+                      value={formData.amount}
+                      onChange={handleChange}
+                      className="dark:bg-finance-900 dark:border-finance-800 dark:text-white"
+                    />
+                  </div>
 
-                {transactionType === "lead" && (
                   <div className="space-y-2">
                     <Label htmlFor="cost_per_lead" className="dark:text-lilac-200">
                       Costo por Lead
@@ -302,14 +359,28 @@ export default function NewTransactionPage() {
                     <Input
                       id="cost_per_lead"
                       type="number"
+                      step="0.01"
                       placeholder="Ej: 10.00"
                       value={formData.cost_per_lead}
                       onChange={handleChange}
                       className="dark:bg-finance-900 dark:border-finance-800 dark:text-white"
                     />
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {transactionType === "lead" && calculatedAmount !== null && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-blue-500 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Cálculo automático de gasto</p>
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      Se registrará un gasto de publicidad por <strong>${calculatedAmount.toFixed(2)}</strong> (
+                      {formData.amount} leads × ${formData.cost_per_lead} por lead)
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="notes" className="dark:text-lilac-200">
@@ -324,39 +395,6 @@ export default function NewTransactionPage() {
                   className="dark:bg-finance-900 dark:border-finance-800 dark:text-white"
                 />
               </div>
-
-              {transactionType === "expense" && (
-                <div className="space-y-2">
-                  <Label htmlFor="category" className="dark:text-lilac-200">
-                    Categoría de Gasto
-                  </Label>
-                  <Select value={formData.category} onValueChange={(value) => handleSelectChange("category", value)}>
-                    <SelectTrigger
-                      id="category"
-                      className="dark:bg-finance-900 dark:border-finance-800 dark:text-white"
-                    >
-                      <SelectValue placeholder="Seleccione categoría" />
-                    </SelectTrigger>
-                    <SelectContent className="dark:bg-finance-900 dark:border-finance-800">
-                      <SelectItem value="advertising" className="dark:text-lilac-200 dark:focus:bg-finance-800">
-                        Publicidad
-                      </SelectItem>
-                      <SelectItem value="platform" className="dark:text-lilac-200 dark:focus:bg-finance-800">
-                        Plataformas
-                      </SelectItem>
-                      <SelectItem value="software" className="dark:text-lilac-200 dark:focus:bg-finance-800">
-                        Software
-                      </SelectItem>
-                      <SelectItem value="admin" className="dark:text-lilac-200 dark:focus:bg-finance-800">
-                        Administrativo
-                      </SelectItem>
-                      <SelectItem value="other" className="dark:text-lilac-200 dark:focus:bg-finance-800">
-                        Otro
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </CardContent>
 
             <CardFooter className="flex justify-between dark:border-t dark:border-finance-800 pt-4">
@@ -370,7 +408,7 @@ export default function NewTransactionPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (transactionType === "lead" && (!formData.amount || !formData.cost_per_lead))}
                 className="dark:bg-lilac-700 dark:hover:bg-lilac-600 dark:text-white"
               >
                 <Save className="h-4 w-4 mr-2" />

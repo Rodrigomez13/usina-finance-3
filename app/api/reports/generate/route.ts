@@ -6,6 +6,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const month = Number.parseInt(searchParams.get("month") || "0")
     const year = Number.parseInt(searchParams.get("year") || "0")
+    const format = searchParams.get("format") || "pdf"
 
     if (!month || !year) {
       return NextResponse.json({ error: "Se requiere mes y año" }, { status: 400 })
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
     // Obtener gastos administrativos del período
     const { data: expenses, error: expError } = await supabase
       .from("admin_expenses")
-      .select("*, expense_distributions(*, clients(name))")
+      .select("*, expense_distributions(*)")
       .gte("date", startDate)
       .lte("date", endDate)
       .order("date", { ascending: false })
@@ -66,7 +67,115 @@ export async function GET(request: Request) {
     }
 
     // En una implementación real, aquí generaríamos un PDF
-    // Por ahora, devolvemos los datos en JSON
+    // Por ahora, devolvemos los datos en JSON con un header que indica que es un PDF
+    if (format === "pdf") {
+      return new NextResponse(
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Reporte Financiero - ${reportData.period}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            h1 { color: #0e6251; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f0f9f7; color: #0e6251; }
+            .summary { margin-bottom: 30px; }
+            .summary div { margin-bottom: 10px; }
+            .balance { font-weight: bold; }
+            .positive { color: green; }
+            .negative { color: red; }
+          </style>
+        </head>
+        <body>
+          <h1>Reporte Financiero - ${reportData.period}</h1>
+          <p>Generado el: ${new Date(reportData.generatedAt).toLocaleString()}</p>
+          
+          <div class="summary">
+            <h2>Resumen</h2>
+            <div>Total Leads: ${reportData.summary.totalLeads}</div>
+            <div>Total Gastos: $${reportData.summary.totalExpenses.toFixed(2)}</div>
+            <div>Total Fondeos: $${reportData.summary.totalFunding.toFixed(2)}</div>
+            <div>Total Gastos Administrativos: $${reportData.summary.totalAdminExpenses.toFixed(2)}</div>
+            <div class="balance ${reportData.summary.balance >= 0 ? "positive" : "negative"}">
+              Balance: $${reportData.summary.balance.toFixed(2)}
+            </div>
+          </div>
+          
+          <h2>Transacciones</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Tipo</th>
+                <th>Monto</th>
+                <th>Notas</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${transactions
+                .map(
+                  (tx) => `
+                <tr>
+                  <td>${new Date(tx.date).toLocaleDateString()}</td>
+                  <td>${tx.clients?.name || "-"}</td>
+                  <td>${
+                    tx.type === "funding"
+                      ? "Fondeo"
+                      : tx.type === "expense"
+                        ? "Gasto"
+                        : tx.type === "lead"
+                          ? "Lead"
+                          : tx.type
+                  }</td>
+                  <td>${tx.type === "lead" ? tx.amount : "$" + tx.amount.toFixed(2)}</td>
+                  <td>${tx.notes || "-"}</td>
+                </tr>
+              `,
+                )
+                .join("")}
+            </tbody>
+          </table>
+          
+          <h2>Gastos Administrativos</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Concepto</th>
+                <th>Monto</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${expenses
+                .map(
+                  (exp) => `
+                <tr>
+                  <td>${new Date(exp.date).toLocaleDateString()}</td>
+                  <td>${exp.concept}</td>
+                  <td>$${exp.amount.toFixed(2)}</td>
+                  <td>${exp.status === "paid" ? "Pagado" : "Pendiente"}</td>
+                </tr>
+              `,
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </body>
+        </html>
+        `,
+        {
+          headers: {
+            "Content-Type": "text/html",
+          },
+        },
+      )
+    }
+
+    // Si no es PDF, devolvemos JSON
     return NextResponse.json(reportData)
   } catch (error) {
     console.error("Error generating report:", error)

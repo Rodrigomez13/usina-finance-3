@@ -11,21 +11,24 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-// Definir las props incluyendo el callback para el cambio de fecha
+// Definir las props incluyendo el callback para el cambio de fecha y el valor inicial
 interface CalendarDateRangePickerProps extends React.HTMLAttributes<HTMLDivElement> {
   onDateChange?: (dateRange: DateRange | undefined) => void
+  initialDateRange?: DateRange
 }
 
-export function CalendarDateRangePicker({ className, onDateChange }: CalendarDateRangePickerProps) {
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(2025, 3, 1),
-    to: new Date(),
-  })
+export function CalendarDateRangePicker({ className, onDateChange, initialDateRange }: CalendarDateRangePickerProps) {
+  const [date, setDate] = React.useState<DateRange | undefined>(
+    initialDateRange || {
+      from: new Date(2025, 3, 1),
+      to: new Date(),
+    },
+  )
 
   // Manejar cambios y notificar al padre
   const handleDateSelect = (dateRange: DateRange | undefined) => {
     setDate(dateRange)
-    if (onDateChange) {
+    if (onDateChange && dateRange?.from && dateRange?.to) {
       onDateChange(dateRange)
     }
   }

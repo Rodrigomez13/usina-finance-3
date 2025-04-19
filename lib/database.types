@@ -1,4 +1,10 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export interface Database {
   public: {
@@ -142,6 +148,115 @@ export interface Database {
           created_at?: string
         }
       }
+      user_roles: {
+        Row: {
+          id: string;
+          role: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          role?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          role?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      get_client_stats: {
+        Args: {
+          start_date: string;
+          end_date: string;
+        };
+        Returns: {
+          client_id: number;
+          client_name: string;
+          leads: number;
+          expenses: number;
+          funding: number;
+          balance: number;
+        }[];
+      };
+      get_dashboard_stats: {
+        Args: {
+          start_date: string;
+          end_date: string;
+        };
+        Returns: {
+          total_leads: number;
+          total_expenses: number;
+          total_funding: number;
+          balance: number;
+        }[];
+      };
+      get_recent_transactions: {
+        Args: {
+          start_date: string;
+          end_date: string;
+          limit_count: number;
+        };
+        Returns: {
+          id: number;
+          client_id: number;
+          client_name: string;
+          type: string;
+          amount: number;
+          date: string;
+          notes: string;
+          payment_method: string;
+          category: string;
+          cost_per_lead: number;
+          created_at: string;
+          created_by: string;
+        }[];
+      };
+      get_transactions_in_range: {
+        Args: {
+          start_date: string;
+          end_date: string;
+        };
+        Returns: {
+          transaction_id: number;
+          owner_name: string;
+          client_name: string;
+          type: string;
+          amount: number;
+          date: string;
+          notes: string;
+        }[];
+      };
+      check_rls_enabled: {
+        Args: {
+          table_name: string;
+        };
+        Returns: boolean;
+      };
+      get_table_policies: {
+        Args: {
+          table_name: string;
+        };
+        Returns: string[];
+      };
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }
+
+export type Tables<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Row"]
+export type InsertTables<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Insert"]
+export type UpdateTables<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Update"]

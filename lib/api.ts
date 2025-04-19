@@ -1,6 +1,6 @@
 // Importar los tipos necesarios
 import type { Transaction, AdminExpense, ClientGroup, ClientStats, DashboardStats } from "@/types/index"
-// import { getRecentTransactions } from '@/lib/api';
+import { apiCache } from "./cache"
 
 // Función para detectar si estamos en el entorno de v0
 const isV0Environment = () => {
@@ -9,209 +9,208 @@ const isV0Environment = () => {
 }
 
 // Función para obtener estadísticas del dashboard
-export async function getDashboardStats(): Promise<DashboardStats> {
-  try {
-    console.log("Iniciando obtención de estadísticas del dashboard...")
+export async function getDashboardStats(
+  startDate: Date = new Date(2025, 3, 1),
+  endDate: Date = new Date(),
+): Promise<DashboardStats> {
+  const cacheKey = `dashboard_stats_${startDate.toISOString()}_${endDate.toISOString()}`
 
-    // Verificar si estamos en el entorno de v0
-    if (isV0Environment()) {
-      console.log("Detectado entorno v0.dev - usando datos de demostración")
-      // Devolver datos de demostración para el entorno de v0
-      return {
-        totalLeads: 250,
-        totalExpenses: 1500.75,
-        totalFunding: 3000.5,
-        balance: 1499.75,
+  return apiCache.get<DashboardStats>(
+    cacheKey,
+    async () => {
+      try {
+        console.log("Iniciando obtención de estadísticas del dashboard...")
+
+        // Verificar si estamos en el entorno de v0
+        if (isV0Environment()) {
+          console.log("Detectado entorno v0.dev - usando datos de demostración")
+          // Devolver datos de demostración para el entorno de v0
+          return {
+            totalLeads: 250,
+            totalExpenses: 1500.75,
+            totalFunding: 3000.5,
+            balance: 1499.75,
+          }
+        }
+
+        // Importar el cliente de Supabase directamente para evitar problemas de inicialización
+        const { getSupabaseClient } = await import("./supabase")
+        const supabase = getSupabaseClient()
+
+        if (!supabase) {
+          console.error("Error: Cliente Supabase no inicializado")
+          return {
+            totalLeads: 0,
+            totalExpenses: 0,
+            totalFunding: 0,
+            balance: 0,
+          }
+        }
+
+        // Usar la función de la base de datos para obtener estadísticas
+        const { data, error } = await supabase.rpc("get_dashboard_stats", {
+          start_date: startDate.toISOString().split("T")[0],
+          end_date: endDate.toISOString().split("T")[0],
+        })
+
+        if (error) {
+          console.error("Error al obtener estadísticas del dashboard:", error)
+          throw error
+        }
+
+        // Si no hay datos, devolver valores por defecto
+        if (!data || data.length === 0) {
+          return {
+            totalLeads: 0,
+            totalExpenses: 0,
+            totalFunding: 0,
+            balance: 0,
+          }
+        }
+
+        // Extraer los datos de la respuesta
+        const stats = data[0]
+        return {
+          totalLeads: Number(stats.total_leads) || 0,
+          totalExpenses: Number(stats.total_expenses) || 0,
+          totalFunding: Number(stats.total_funding) || 0,
+          balance: Number(stats.balance) || 0,
+        }
+      } catch (error) {
+        console.error("Error inesperado al obtener estadísticas del dashboard:", error)
+        // Devolver valores por defecto en caso de error
+        return {
+          totalLeads: 0,
+          totalExpenses: 0,
+          totalFunding: 0,
+          balance: 0,
+        }
       }
-    }
-
-    // Obtener el mes actual
-    const now = new Date()
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
-
-    // Importar el cliente de Supabase directamente para evitar problemas de inicialización
-    const { getSupabaseClient } = await import("./supabase")
-    const supabase = getSupabaseClient()
-
-    if (!supabase) {
-      console.error("Error: Cliente Supabase no inicializado")
-      return {
-        totalLeads: 0,
-        totalExpenses: 0,
-        totalFunding: 0,
-        balance: 0,
-      }
-    }
-
-    // Obtener estadísticas de leads
-    let leadsData: any[] = []
-    try {
-      console.log("Obteniendo datos de leads...")
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("amount")
-        .eq("type", "lead")
-        .gte("date", firstDayOfMonth)
-        .lte("date", lastDayOfMonth)
-
-      if (error) throw error
-      console.log(`Datos de leads obtenidos: ${data?.length || 0} registros`)
-      leadsData = data || []
-    } catch (err) {
-      console.error("Error al obtener datos de leads:", err)
-      // Continuamos con un array vacío
-      leadsData = []
-    }
-
-    // Obtener estadísticas de gastos
-    let expensesData: any[] = []
-    try {
-      console.log("Obteniendo datos de gastos...")
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("amount")
-        .eq("type", "expense")
-        .gte("date", firstDayOfMonth)
-        .lte("date", lastDayOfMonth)
-
-      if (error) throw error
-      console.log(`Datos de gastos obtenidos: ${data?.length || 0} registros`)
-      expensesData = data || []
-    } catch (err) {
-      console.error("Error al obtener datos de gastos:", err)
-      // Continuamos con un array vacío
-      expensesData = []
-    }
-
-    // Obtener estadísticas de fondeos
-    let fundingData: any[] = []
-    try {
-      console.log("Obteniendo datos de fondeos...")
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("amount")
-        .eq("type", "funding")
-        .gte("date", firstDayOfMonth)
-        .lte("date", lastDayOfMonth)
-
-      if (error) throw error
-      console.log(`Datos de fondeos obtenidos: ${data?.length || 0} registros`)
-      fundingData = data || []
-    } catch (err) {
-      console.error("Error al obtener datos de fondeos:", err)
-      // Continuamos con un array vacío
-      fundingData = []
-    }
-
-    // Calcular totales
-    const totalLeads = leadsData.reduce((sum, item) => sum + (item.amount || 0), 0) || 0
-    const totalExpenses = expensesData.reduce((sum, item) => sum + (item.amount || 0), 0) || 0
-    const totalFunding = fundingData.reduce((sum, item) => sum + (item.amount || 0), 0) || 0
-    const balance = totalFunding - totalExpenses
-
-    console.log("Estadísticas calculadas:", { totalLeads, totalExpenses, totalFunding, balance })
-
-    return {
-      totalLeads,
-      totalExpenses,
-      totalFunding,
-      balance,
-    }
-  } catch (error) {
-    console.error("Error inesperado al obtener estadísticas del dashboard:", error)
-    // Devolver valores por defecto en caso de error
-    return {
-      totalLeads: 0,
-      totalExpenses: 0,
-      totalFunding: 0,
-      balance: 0,
-    }
-  }
+    },
+    { expiry: 30 * 60 * 1000 }, // 30 minutos de caché
+  )
 }
 
 // Función para obtener transacciones recientes
-export async function getRecentTransactions(): Promise<Transaction[]> {
-  try {
-    console.log("Obteniendo transacciones recientes...")
+export async function getRecentTransactions(
+  startDate: Date = new Date(2025, 3, 1),
+  endDate: Date = new Date(),
+  limit = 5,
+): Promise<Transaction[]> {
+  const cacheKey = `recent_transactions_${startDate.toISOString()}_${endDate.toISOString()}_${limit}`
 
-    // Verificar si estamos en el entorno de v0
-    if (isV0Environment()) {
-      console.log("Detectado entorno v0.dev - usando datos de demostración")
-      // Devolver datos de demostración para el entorno de v0
-      return [
-        {
-          id: 1,
-          client_id: 1,
-          type: "funding",
-          amount: 1000,
-          date: new Date().toISOString(),
-          notes: "Fondeo inicial",
-          payment_method: "transfer",
-          category: null,
-          cost_per_lead: null,
-          created_at: new Date().toISOString(),
-          created_by: "admin@example.com",
-          clients: { name: "Fenix" },
-        },
-        {
-          id: 2,
-          client_id: 2,
-          type: "expense",
-          amount: 250.5,
-          date: new Date().toISOString(),
-          notes: "Publicidad en Facebook",
-          payment_method: "transfer",
-          category: "advertising",
-          cost_per_lead: null,
-          created_at: new Date().toISOString(),
-          created_by: "admin@example.com",
-          clients: { name: "Eros" },
-        },
-        {
-          id: 3,
-          client_id: 3,
-          type: "lead",
-          amount: 50,
-          date: new Date().toISOString(),
-          notes: "Leads de campaña de abril",
-          payment_method: null,
-          category: null,
-          cost_per_lead: null,
-          created_at: new Date().toISOString(),
-          created_by: "admin@example.com",
-          clients: { name: "Fortuna" },
-        },
-      ]
-    }
+  return apiCache.get<Transaction[]>(
+    cacheKey,
+    async () => {
+      try {
+        console.log("Obteniendo transacciones recientes...")
 
-    // Importar el cliente de Supabase directamente
-    const { getSupabaseClient } = await import("./supabase")
-    const supabase = getSupabaseClient()
+        // Verificar si estamos en el entorno de v0
+        if (isV0Environment()) {
+          console.log("Detectado entorno v0.dev - usando datos de demostración")
+          // Devolver datos de demostración para el entorno de v0
+          return [
+            {
+              id: 1,
+              client_id: 1,
+              type: "funding",
+              amount: 1000,
+              date: new Date().toISOString(),
+              notes: "Fondeo inicial",
+              payment_method: "transfer",
+              category: null,
+              cost_per_lead: null,
+              created_at: new Date().toISOString(),
+              created_by: "admin@example.com",
+              clients: { name: "Fenix" },
+            },
+            {
+              id: 2,
+              client_id: 2,
+              type: "expense",
+              amount: 250.5,
+              date: new Date().toISOString(),
+              notes: "Publicidad en Facebook",
+              payment_method: "transfer",
+              category: "advertising",
+              cost_per_lead: null,
+              created_at: new Date().toISOString(),
+              created_by: "admin@example.com",
+              clients: { name: "Eros" },
+            },
+            {
+              id: 3,
+              client_id: 3,
+              type: "lead",
+              amount: 50,
+              date: new Date().toISOString(),
+              notes: "Leads de campaña de abril",
+              payment_method: null,
+              category: null,
+              cost_per_lead: null,
+              created_at: new Date().toISOString(),
+              created_by: "admin@example.com",
+              clients: { name: "Fortuna" },
+            },
+          ]
+        }
 
-    if (!supabase) {
-      console.error("Error: Cliente Supabase no inicializado")
-      return []
-    }
+        // Importar el cliente de Supabase directamente
+        const { getSupabaseClient } = await import("./supabase")
+        const supabase = getSupabaseClient()
 
-    // Obtener las 5 transacciones más recientes
-    const { data, error } = await supabase
-      .from("transactions")
-      .select("*, clients(name)")
-      .order("date", { ascending: false })
-      .limit(5)
+        if (!supabase) {
+          console.error("Error: Cliente Supabase no inicializado")
+          return []
+        }
 
-    if (error) {
-      console.error("Error al obtener transacciones recientes:", error)
-      return []
-    }
+        // Ajustar fechas para UTC
+        const formattedStartDate = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000)
+          .toISOString()
+          .split("T")[0]
+        const formattedEndDate = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000)
+          .toISOString()
+          .split("T")[0]
 
-    console.log(`Transacciones recientes obtenidas: ${data?.length || 0} registros`)
-    return data || []
-  } catch (error) {
-    console.error("Error inesperado al obtener transacciones recientes:", error)
-    return []
-  }
+        console.log(`Fechas ajustadas para UTC: ${formattedStartDate} a ${formattedEndDate}`)
+
+        // Usar la función de la base de datos para obtener transacciones recientes
+        const { data, error } = await supabase.rpc("get_recent_transactions", {
+          start_date: formattedStartDate,
+          end_date: formattedEndDate,
+          limit_count: limit,
+        })
+
+        if (error) {
+          console.error("Error al obtener transacciones recientes:", error)
+          return []
+        }
+
+        // Transformar los datos para que coincidan con el tipo Transaction
+        const transactions = data.map((tx: any) => ({
+          id: tx.id,
+          client_id: tx.client_id,
+          type: tx.type,
+          amount: tx.amount,
+          date: tx.date,
+          notes: tx.notes,
+          payment_method: tx.payment_method,
+          category: tx.category,
+          cost_per_lead: tx.cost_per_lead,
+          created_at: tx.created_at,
+          created_by: tx.created_by,
+          clients: { name: tx.client_name },
+        }))
+
+        console.log(`Transacciones recientes obtenidas: ${transactions.length} registros`)
+        return transactions
+      } catch (error) {
+        console.error("Error inesperado al obtener transacciones recientes:", error)
+        return []
+      }
+    },
+    { expiry: 15 * 60 * 1000 }, // 15 minutos de caché
+  )
 }
 
 export async function getRecentTransactionsByDate(startDate: Date, endDate: Date): Promise<any[]> {
@@ -383,119 +382,102 @@ export async function getClientGroups(): Promise<ClientGroup[]> {
 }
 
 // Función para obtener estadísticas de clientes
-export async function getClientStats(): Promise<ClientStats> {
-  try {
-    console.log("Obteniendo estadísticas de clientes...")
+export async function getClientStats(
+  startDate: Date = new Date(2025, 3, 1),
+  endDate: Date = new Date(),
+): Promise<ClientStats> {
+  const cacheKey = `client_stats_${startDate.toISOString()}_${endDate.toISOString()}`
 
-    // Verificar si estamos en el entorno de v0
-    if (isV0Environment()) {
-      console.log("Detectado entorno v0.dev - usando datos de demostración")
-      // Devolver datos de demostración para el entorno de v0
-      return {
-        Fenix: {
-          leads: 120,
-          expenses: 800.5,
-          funding: 1500.0,
-          balance: 699.5,
-        },
-        Eros: {
-          leads: 85,
-          expenses: 450.25,
-          funding: 1000.0,
-          balance: 549.75,
-        },
-        Fortuna: {
-          leads: 65,
-          expenses: 320.0,
-          funding: 800.0,
-          balance: 480.0,
-        },
-        Gana24: {
-          leads: 45,
-          expenses: 250.0,
-          funding: 600.0,
-          balance: 350.0,
-        },
-        Atenea: {
-          leads: 30,
-          expenses: 180.0,
-          funding: 400.0,
-          balance: 220.0,
-        },
-        Flashbet: {
-          leads: 20,
-          expenses: 150.0,
-          funding: 300.0,
-          balance: 150.0,
-        },
+  return apiCache.get<ClientStats>(
+    cacheKey,
+    async () => {
+      try {
+        console.log("Obteniendo estadísticas de clientes...")
+
+        // Verificar si estamos en el entorno de v0
+        if (isV0Environment()) {
+          console.log("Detectado entorno v0.dev - usando datos de demostración")
+          // Devolver datos de demostración para el entorno de v0
+          return {
+            Fenix: {
+              leads: 120,
+              expenses: 800.5,
+              funding: 1500.0,
+              balance: 699.5,
+            },
+            Eros: {
+              leads: 85,
+              expenses: 450.25,
+              funding: 1000.0,
+              balance: 549.75,
+            },
+            Fortuna: {
+              leads: 65,
+              expenses: 320.0,
+              funding: 800.0,
+              balance: 480.0,
+            },
+            Gana24: {
+              leads: 45,
+              expenses: 250.0,
+              funding: 600.0,
+              balance: 350.0,
+            },
+            Atenea: {
+              leads: 30,
+              expenses: 180.0,
+              funding: 400.0,
+              balance: 220.0,
+            },
+            Flashbet: {
+              leads: 20,
+              expenses: 150.0,
+              funding: 300.0,
+              balance: 150.0,
+            },
+          }
+        }
+
+        // Importar el cliente de Supabase directamente
+        const { getSupabaseClient } = await import("./supabase")
+        const supabase = getSupabaseClient()
+
+        if (!supabase) {
+          console.error("Error: Cliente Supabase no inicializado")
+          return {}
+        }
+
+        // Usar la función de la base de datos para obtener estadísticas por cliente
+        const { data, error } = await supabase.rpc("get_client_stats", {
+          start_date: startDate.toISOString().split("T")[0],
+          end_date: endDate.toISOString().split("T")[0],
+        })
+
+        if (error) {
+          console.error("Error al obtener estadísticas de clientes:", error)
+          return {}
+        }
+
+        // Transformar los datos al formato esperado
+        const stats: ClientStats = {}
+        data.forEach((item: any) => {
+          stats[item.client_name] = {
+            leads: Number(item.leads) || 0,
+            expenses: Number(item.expenses) || 0,
+            funding: Number(item.funding) || 0,
+            balance: Number(item.balance) || 0,
+          }
+        })
+
+        console.log("Estadísticas de clientes calculadas")
+        return stats
+      } catch (error) {
+        console.error("Error inesperado al obtener estadísticas de clientes:", error)
+        return {}
       }
-    }
-
-    // Importar el cliente de Supabase directamente
-    const { getSupabaseClient } = await import("./supabase")
-    const supabase = getSupabaseClient()
-
-    if (!supabase) {
-      console.error("Error: Cliente Supabase no inicializado")
-      return {}
-    }
-
-    // Obtener todos los clientes
-    const { data: clients, error: clientsError } = await supabase.from("clients").select("id, name").order("name")
-
-    if (clientsError) {
-      console.error("Error al obtener clientes:", clientsError)
-      return {}
-    }
-
-    // Obtener todas las transacciones
-    const { data: transactions, error: transactionsError } = await supabase
-      .from("transactions")
-      .select("client_id, type, amount, clients(name)")
-
-    if (transactionsError) {
-      console.error("Error al obtener transacciones:", transactionsError)
-      return {}
-    }
-
-    // Calcular estadísticas por cliente
-    const stats: ClientStats = {}
-
-    // Inicializar estadísticas para cada cliente
-    clients.forEach((client) => {
-      stats[client.name] = {
-        leads: 0,
-        expenses: 0,
-        funding: 0,
-        balance: 0,
-      }
-    })
-
-    // Calcular estadísticas basadas en transacciones
-    transactions.forEach((tx) => {
-      const clientName = tx.clients?.name
-      if (!clientName || !stats[clientName]) return
-
-      if (tx.type === "lead") {
-        stats[clientName].leads += tx.amount || 0
-      } else if (tx.type === "expense") {
-        stats[clientName].expenses += tx.amount || 0
-      } else if (tx.type === "funding") {
-        stats[clientName].funding += tx.amount || 0
-      }
-    })
-
-    // Calcular balance para cada cliente
-    Object.keys(stats).forEach((clientName) => {
-      stats[clientName].balance = stats[clientName].funding - stats[clientName].expenses
-    })
-
-    console.log("Estadísticas de clientes calculadas")
-    return stats
-  } catch (error) {
-    console.error("Error inesperado al obtener estadísticas de clientes:", error)
-    return {}
-  }
+    },
+    { expiry: 30 * 60 * 1000 }, // 30 minutos de caché
+  )
 }
 
 // Función para obtener la lista de clientes
@@ -954,11 +936,15 @@ export async function getDailyClientSummary(startDate: Date, endDate: Date): Pro
       return []
     }
 
-    // Formatear fechas correctamente (IMPORTANTE)
-    const formattedStartDate = startDate.toISOString().split("T")[0]
-    const formattedEndDate = endDate.toISOString().split("T")[0]
+    // Formatear fechas correctamente ajustando la zona horaria
+    const formattedStartDate = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000)
+      .toISOString()
+      .split("T")[0]
+    const formattedEndDate = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000)
+      .toISOString()
+      .split("T")[0]
 
-    console.log(`Fechas formateadas: ${formattedStartDate} a ${formattedEndDate}`)
+    console.log(`Fechas ajustadas para UTC: ${formattedStartDate} a ${formattedEndDate}`)
 
     // Llamar a la función RPC
     try {
@@ -1064,11 +1050,11 @@ function processTransactionData(clients: any[], transactions: any[], startDate: 
 
     if (dataMap[dateStr] && dataMap[dateStr][clientId]) {
       if (tx.type === "lead") {
-        dataMap[dateStr][clientId].leads += tx.amount || 0
+        dataMap[dateStr][clientId].leads += tx.amount ?? 0
       } else if (tx.type === "expense") {
-        dataMap[dateStr][clientId].expenses += tx.amount || 0
+        dataMap[dateStr][clientId].expenses += tx.amount ?? 0
       } else if (tx.type === "funding") {
-        dataMap[dateStr][clientId].funding += tx.amount || 0
+        dataMap[dateStr][clientId].funding += tx.amount ?? 0
       }
     }
   })
@@ -1197,9 +1183,15 @@ export async function getClientTransactions(clientId: number, startDate: Date, e
       return []
     }
 
-    // Formatear fechas correctamente
-    const formattedStartDate = startDate.toISOString()
-    const formattedEndDate = endDate.toISOString()
+    // Formatear fechas correctamente ajustando la zona horaria
+    const formattedStartDate = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000)
+      .toISOString()
+      .split("T")[0]
+    const formattedEndDate = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000)
+      .toISOString()
+      .split("T")[0]
+
+    console.log(`Fechas ajustadas para UTC: ${formattedStartDate} a ${formattedEndDate}`)
 
     // Obtener transacciones del cliente
     const { data, error } = await supabase
@@ -1222,7 +1214,7 @@ export async function getClientTransactions(clientId: number, startDate: Date, e
   }
 }
 
-// Función para obtener gastos administrativos de un cliente específico
+// Modificar la función getClientAdminExpenses para corregir el problema de tipos
 export async function getClientAdminExpenses(clientId: number, startDate: Date, endDate: Date): Promise<any[]> {
   try {
     console.log(
@@ -1262,11 +1254,17 @@ export async function getClientAdminExpenses(clientId: number, startDate: Date, 
       return []
     }
 
-    // Formatear fechas correctamente
-    const formattedStartDate = startDate.toISOString()
-    const formattedEndDate = endDate.toISOString()
+    // Formatear fechas correctamente - Usar UTC para evitar problemas de zona horaria
+    const formattedStartDate = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000)
+      .toISOString()
+      .split("T")[0]
+    const formattedEndDate = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000)
+      .toISOString()
+      .split("T")[0]
 
-    // Obtener gastos administrativos del cliente
+    console.log(`Fechas ajustadas para UTC: ${formattedStartDate} a ${formattedEndDate}`)
+
+    // Obtener gastos administrativos del cliente - CORREGIDO: eliminamos el ordenamiento problemático
     const { data, error } = await supabase
       .from("expense_distributions")
       .select(`
@@ -1285,7 +1283,6 @@ export async function getClientAdminExpenses(clientId: number, startDate: Date, 
       .eq("client_id", clientId)
       .gte("admin_expenses.date", formattedStartDate)
       .lte("admin_expenses.date", formattedEndDate)
-      .order("admin_expenses.date", { ascending: false })
 
     if (error) {
       console.error("Error al obtener gastos administrativos del cliente:", error)
@@ -1297,8 +1294,8 @@ export async function getClientAdminExpenses(clientId: number, startDate: Date, 
       data?.map((item) => ({
         id: item.id,
         expense_id: item.expense_id,
-        concept: item.admin_expenses?.concept || "Gasto administrativo",
-        date: item.admin_expenses?.date || new Date().toISOString(),
+        concept: item.admin_expenses?.concept ?? "Gasto administrativo",
+        date: item.admin_expenses?.date ?? new Date().toISOString(),
         amount: item.amount,
         status: item.status,
       })) || []
@@ -1374,8 +1371,8 @@ export async function updateExpenseDistributionStatus(
             client_id: distData.client_id,
             type: "expense",
             amount: distData.amount,
-            date: distData.admin_expenses?.date || new Date().toISOString(),
-            notes: `Gasto administrativo: ${distData.admin_expenses?.concept || "Sin concepto"}`,
+            date: distData.admin_expenses?.date ?? new Date().toISOString(),
+            notes: `Gasto administrativo: ${distData.admin_expenses?.concept ?? "Sin concepto"}`,
             category: "admin",
             created_by: "sistema",
           })

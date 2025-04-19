@@ -1,210 +1,142 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { getRecentTransactions } from "@/lib/api"
-import { Card, CardContent } from "@/components/ui/card"
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import type { Transaction } from "@/types/index"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
 
-// Datos de demostración para v0
-const demoTransactions: Transaction[] = [
-  {
-    id: 1,
-    client_id: 1,
-    type: "funding",
-    amount: 1000,
-    date: new Date().toISOString(),
-    notes: "Fondeo inicial",
-    payment_method: "transfer",
-    category: null,
-    cost_per_lead: null,
-    created_at: new Date().toISOString(),
-    created_by: "admin@example.com",
-    clients: { name: "Fenix" },
-  },
-  {
-    id: 2,
-    client_id: 2,
-    type: "expense",
-    amount: 250.5,
-    date: new Date().toISOString(),
-    notes: "Publicidad en Facebook",
-    payment_method: "transfer",
-    category: "advertising",
-    cost_per_lead: null,
-    created_at: new Date().toISOString(),
-    created_by: "admin@example.com",
-    clients: { name: "Eros" },
-  },
-  {
-    id: 3,
-    client_id: 3,
-    type: "lead",
-    amount: 50,
-    date: new Date().toISOString(),
-    notes: "Leads de campaña de abril",
-    payment_method: null,
-    category: null,
-    cost_per_lead: null,
-    created_at: new Date().toISOString(),
-    created_by: "admin@example.com",
-    clients: { name: "Fortuna" },
-  },
-  {
-    id: 4,
-    client_id: 4,
-    type: "expense",
-    amount: 120.75,
-    date: new Date(Date.now() - 86400000).toISOString(), // Ayer
-    notes: "Servicios de diseño",
-    payment_method: "card",
-    category: "services",
-    cost_per_lead: null,
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    created_by: "admin@example.com",
-    clients: { name: "Gana24" },
-  },
-  {
-    id: 5,
-    client_id: 5,
-    type: "funding",
-    amount: 500,
-    date: new Date(Date.now() - 172800000).toISOString(), // Hace 2 días
-    notes: "Fondeo mensual",
-    payment_method: "transfer",
-    category: null,
-    cost_per_lead: null,
-    created_at: new Date(Date.now() - 172800000).toISOString(),
-    created_by: "admin@example.com",
-    clients: { name: "Atenea" },
-  },
-]
-
-interface RecentTransactionsProps {
-  isV0?: boolean
+interface Transaction {
+  id: number
+  client_id: number
+  type: "funding" | "expense" | "lead"
+  amount: number
+  date: string
+  notes?: string
+  clients: {
+    name: string
+  }
 }
 
-export function RecentTransactions({ isV0 = false }: RecentTransactionsProps) {
+export function RecentTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchTransactions() {
       try {
-        setLoading(true)
+        // En una implementación real, esto sería una llamada a la API
+        // Por ahora, usamos datos de ejemplo
+        const demoTransactions: Transaction[] = [
+          {
+            id: 1,
+            client_id: 1,
+            type: "expense",
+            amount: 460,
+            date: "2025-04-18T10:00:00Z",
+            notes: "Publicidad server 4",
+            clients: { name: "Atenea" },
+          },
+          {
+            id: 2,
+            client_id: 1,
+            type: "lead",
+            amount: 100,
+            date: "2025-04-18T10:00:00Z",
+            notes: "Publicidad server 4",
+            clients: { name: "Atenea" },
+          },
+          {
+            id: 3,
+            client_id: 2,
+            type: "expense",
+            amount: 249.75,
+            date: "2025-04-17T14:30:00Z",
+            notes: "Gasto administrativo: Prueba de gasto",
+            clients: { name: "Gana24" },
+          },
+          {
+            id: 4,
+            client_id: 3,
+            type: "funding",
+            amount: 1000,
+            date: "2025-04-16T09:15:00Z",
+            notes: "Fondeo inicial",
+            clients: { name: "Fenix" },
+          },
+          {
+            id: 5,
+            client_id: 4,
+            type: "expense",
+            amount: 350.25,
+            date: "2025-04-15T16:45:00Z",
+            notes: "Publicidad Facebook",
+            clients: { name: "Flash" },
+          },
+        ]
 
-        // Si estamos en v0, usar datos de demostración
-        if (isV0) {
-          console.log("Usando transacciones de demostración para v0")
-          setTimeout(() => {
-            setTransactions(demoTransactions)
-            setLoading(false)
-          }, 500) // Simular carga
-          return
-        }
+        // Filtrar para no mostrar leads en las transacciones recientes
+        const filteredTransactions = demoTransactions.filter((tx) => tx.type !== "lead")
 
-        const data = await getRecentTransactions()
-        setTransactions(data || [])
+        setTransactions(filteredTransactions)
+        setLoading(false)
       } catch (error) {
         console.error("Error al cargar transacciones recientes:", error)
-        setTransactions([])
-      } finally {
         setLoading(false)
       }
     }
 
     fetchTransactions()
-  }, [isV0])
+  }, [])
 
-  if (loading) {
-    return (
-      <div className="space-y-3">
-        {[...Array(3)].map((_, i) => (
-          <Card key={i} className="bg-gray-50 animate-pulse">
-            <CardContent className="p-4 h-16"></CardContent>
-          </Card>
-        ))}
-      </div>
-    )
-  }
-
-  if (transactions.length === 0) {
-    return <p className="text-center text-gray-500 py-4">No hay transacciones recientes</p>
+  const formatDate = (dateString: string) => {
+    return format(new Date(dateString), "dd/MM/yyyy", { locale: es })
   }
 
   return (
-    <div className="space-y-3">
-      {transactions.map((tx: Transaction) => (
-        <Card key={tx.id} className="hover:bg-gray-50 transition-colors">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-medium">{tx.clients?.name || "Cliente desconocido"}</p>
-                <p className="text-sm text-gray-500">
-                  {new Date(tx.date).toLocaleDateString("es-ES")} - {tx.notes || "Sin notas"}
-                </p>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-xl text-[#0e6251]">Transacciones Recientes</CardTitle>
+        <CardDescription>Se muestran las últimas 5 transacciones</CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        {loading ? (
+          <div className="flex justify-center items-center h-40">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#148f77]"></div>
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="text-center py-8 text-[#7f8c8d]">No hay transacciones recientes</div>
+        ) : (
+          <div className="divide-y divide-[#e8f3f1]">
+            {transactions.map((transaction) => (
+              <div key={transaction.id} className="flex items-center justify-between p-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none text-[#2c3e50]">{transaction.clients.name}</p>
+                  <p className="text-sm text-[#7f8c8d]">
+                    {formatDate(transaction.date)} - {transaction.notes}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">
+                    {transaction.type === "funding" ? "+" : "-"}${transaction.amount.toFixed(2)}
+                  </p>
+                  <Badge
+                    className={
+                      transaction.type === "funding"
+                        ? "bg-green-100 text-green-800 hover:bg-green-100"
+                        : transaction.type === "expense"
+                          ? "bg-red-100 text-red-800 hover:bg-red-100"
+                          : "bg-blue-100 text-blue-800 hover:bg-blue-100"
+                    }
+                  >
+                    {transaction.type === "funding" ? "Fondeo" : transaction.type === "expense" ? "Gasto" : "Leads"}
+                  </Badge>
+                </div>
               </div>
-              <div className="flex flex-col items-end">
-                <p className="font-bold">${tx.amount.toFixed(2)}</p>
-                <Badge
-                  className={
-                    tx.type === "funding"
-                      ? "bg-green-100 text-green-800"
-                      : tx.type === "expense"
-                        ? "bg-red-100 text-red-800"
-                        : "bg-blue-100 text-blue-800"
-                  }
-                >
-                  {tx.type === "funding" ? "Fondeo" : tx.type === "expense" ? "Gasto" : "Leads"}
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
-
-// export function RecentTransactions() {
-
-//   let [transactions, setTransactions] = useState<any[]>([])
-//   const [loading, setLoading] = useState(true)
-
-//   useEffect(() => {
-//     async function fetchExampleTransactions() {
-//       try {
-//         setLoading(true)
-//         const exampleData = await fetch("https://api.sampleapis.com/coffee/hot").then((res) => res.json())
-//         setTransactions(exampleData || [])
-
-//         console.log(transactions);
-//       }
-//       catch (error) {
-//         console.error("Error fetching example transactions:", error)
-//         setTransactions([])
-//       }
-//       finally {
-//         setLoading(false)
-//       }
-//     }
-//     fetchExampleTransactions()
-//   }, [])
-
-//   return (
-//     <>
-//       <h1>Cantidad de transacciones: {transactions.length}</h1>
-//       <br />
-//       { transactions.forEach((transaction) => (
-//         <div key={transaction.id}>
-//           <p>{transaction.title}</p>
-//           <p>{transaction.price}</p>
-//           <p>{transaction.description}</p>
-//         </div>
-//       )) }
-//       {loading && <p>Cargando...</p>}
-//       {transactions.length === 0 && <p>No hay transacciones recientes</p>}
-
-//     </>
-//   )
-// }
